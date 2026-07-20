@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My cart{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Shopping cart' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="shopping-cart spad">
+    <div class="container">
+        {% if cart|length %}
+            <div class="row">
+                <div class="col-lg-8">
+                    {# A table would force a horizontal scroll on a phone, so #}
+                    {# each line is its own card and the table only appears   #}
+                    {# from md up.                                            #}
+                    <div class="cart-lines">
+                        {% for item in cart %}
+                            <div class="cart-line">
+                                <a class="cart-line__pic" href="{{ item.product.get_absolute_url }}">
+                                    <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}"
+                                         alt="{{ item.product.name }}" loading="lazy">
+                                </a>
+                                <div class="cart-line__body">
+                                    <h6><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></h6>
+                                    <span class="cart-line__unit">KES {{ item.price|floatformat:2 }} each</span>
+
+                                    <form action="{% url 'cart:add' item.product.id %}" method="post"
+                                          class="cart-line__qty">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="override" value="true">
+                                        <label for="qty-{{ item.product.id }}" class="sr-only">Quantity</label>
+                                        <input type="number" id="qty-{{ item.product.id }}" name="quantity"
+                                               value="{{ item.quantity }}" min="1" max="{{ item.product.stock }}"
+                                               inputmode="numeric">
+                                        <button type="submit" class="site-btn site-btn--sm">Update</button>
+                                    </form>
+                                </div>
+                                <div class="cart-line__end">
+                                    <span class="cart-line__total">KES {{ item.total_price|floatformat:2 }}</span>
+                                    <form action="{% url 'cart:remove' item.product.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="icon-button" aria-label="Remove {{ item.product.name }}">
+                                            <span class="icon_close"></span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="shopping__cart__btns">
+                        <a href="{% url 'catalog:product_list' %}" class="primary-btn cart-btn">Continue shopping</a>
+                        <form action="{% url 'cart:clear' %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="primary-btn cart-btn cart-btn-right">Empty cart</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div data-cart-summary>
+                        {% include 'cart/_summary.html' %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="row">
+                <div class="col-12">
+                    <p class="empty-state">
+                        Your cart is empty.
+                        <a href="{% url 'catalog:product_list' %}">Start shopping</a>
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block sticky_bar %}
+    {% if cart|length %}
+        <div class="sticky-bar d-lg-none">
+            <span class="sticky-bar__price">KES {{ cart.get_total_price|floatformat:2 }}</span>
+            <a href="{% url 'orders:checkout' %}" class="primary-btn">Checkout</a>
+        </div>
+    {% endif %}
+{% endblock %}

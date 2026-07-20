@@ -23,3 +23,9 @@ db.sqlite3
 # OS files
 .DS_Store
 Thumbs.db
+
+# Collected static files
+staticfiles/
+
+# User uploads
+media/

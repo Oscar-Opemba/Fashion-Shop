@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}My wishlist{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Wishlist' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="shop spad">
+    <div class="container">
+        <div class="row">
+            {% for item in items %}
+                <div class="col-6 col-md-4 col-lg-3">
+                    {% with product=item.product %}
+                        {% include 'includes/product_card.html' %}
+                    {% endwith %}
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <p class="empty-state">
+                        Your wishlist is empty.
+                        <a href="{% url 'catalog:product_list' %}">Browse products</a>
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

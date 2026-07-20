@@ -1,0 +1,942 @@
+/* =========================================================================
+   True-dark restyle for the MaleFashion theme.
+
+   Loaded AFTER the theme's style.css so the theme's own files are never
+   edited — re-downloading the template cannot clobber any of this.
+
+   The source theme is monochrome (#111 text, #b7b7b7 muted, #e5e5e5 borders,
+   white page, one red accent), which is why it inverts cleanly.
+   ========================================================================= */
+
+:root {
+    --bg: #111111;
+    --surface: #1a1a1a;
+    --surface-2: #202020;
+    --text: #e8e8e8;
+    --muted: #8a8a8a;
+    --border: #2a2a2a;
+    /* The theme's red is split into three roles. On a near-black page the
+       original #e53637 only reaches 4.07:1 as text and 4.27:1 behind white,
+       both short of WCAG AA. Decorative use keeps the brand red; text and
+       button fills use shifted variants that measure >= 4.5:1. */
+    --accent: #e53637;          /* borders, underlines, non-text accents */
+    --accent-text: #ef5350;     /* red text: 5.42 on --bg, 4.99 on --surface */
+    --accent-btn: #d32f2f;      /* button fill: white on it is 4.98 */
+    --accent-hover: #b71c1c;    /* white on it is 6.57 */
+    --on-accent: #ffffff;
+
+    --radius: 4px;
+    --tap: 44px;              /* minimum comfortable tap target */
+    --sticky-h: 64px;
+}
+
+/* ---------- Base ---------- */
+
+html, body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+body {
+    /* Nothing may push the page sideways on a phone. */
+    overflow-x: hidden;
+}
+
+a { color: var(--text); }
+a:hover, a:focus { color: var(--accent-text); }
+
+h1, h2, h3, h4, h5, h6 { color: var(--text); }
+p { color: var(--muted); }
+
+hr { border-color: var(--border); }
+
+::selection { background: var(--accent-btn); color: var(--on-accent); }
+
+/* Visible focus matters more on dark, where the default ring disappears. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* The theme's preloader is a white sheet; make it match the page. */
+#preloder { background: var(--bg); }
+
+/* ---------- Header ---------- */
+
+.header,
+.header__top {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.header__top { border-bottom-color: var(--border); }
+.header__top__left p,
+.offcanvas__text p { color: var(--muted); }
+
+.header__top__right .header__top__links a,
+.offcanvas__links a { color: var(--muted); }
+.header__top__right .header__top__links a:hover,
+.offcanvas__links a:hover { color: var(--accent-text); }
+
+.header__menu ul li a { color: var(--text); }
+.header__menu ul li.active a,
+.header__menu ul li:hover a { color: var(--accent-text); }
+
+.header__menu ul li .dropdown {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+}
+.header__menu ul li .dropdown li a { color: var(--text); }
+.header__menu ul li .dropdown li a:hover { color: var(--accent-text); }
+
+/* Sign-out has to be a POST, so it is a button styled as a link. */
+.header__logout { display: inline; }
+.header__logout button {
+    background: none;
+    border: 0;
+    padding: 0 0 0 20px;
+    color: var(--muted);
+    font-size: 14px;
+    cursor: pointer;
+}
+.header__logout button:hover { color: var(--accent-text); }
+
+/* The theme's logo and nav icons are dark PNGs — invisible on a dark
+   background. Inverting them keeps them usable without re-cutting assets. */
+.header__logo img,
+.header__nav__option img,
+.offcanvas__nav__option img,
+.product__hover img {
+    filter: invert(1) brightness(1.6);
+}
+
+.header__nav__option a span,
+.offcanvas__nav__option a span {
+    background: var(--accent-btn);
+    color: var(--on-accent);
+}
+
+.header__nav__option .price,
+.offcanvas__nav__option .price { color: var(--text); }
+
+.canvas__open { color: var(--text); }
+
+/* ---------- Offcanvas / mobile menu ---------- */
+
+.offcanvas-menu-wrapper { background: var(--surface); }
+
+.slicknav_menu { background: transparent; }
+.slicknav_nav { background: var(--surface-2); }
+.slicknav_nav a { color: var(--text); }
+.slicknav_nav a:hover { background: var(--bg); color: var(--accent-text); }
+.slicknav_btn { background: var(--surface-2); }
+
+/* ---------- Breadcrumb ---------- */
+
+.breadcrumb-option {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 30px 0;
+}
+.breadcrumb__text h4 { color: var(--text); }
+.breadcrumb__links a,
+.breadcrumb__links span { color: var(--muted); }
+.breadcrumb__links a:hover { color: var(--accent-text); }
+
+/* ---------- Buttons ---------- */
+
+.primary-btn,
+.site-btn {
+    background: var(--accent-btn);
+    color: var(--on-accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    min-height: var(--tap);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 26px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease;
+}
+.primary-btn:hover,
+.site-btn:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--on-accent);
+}
+
+.site-btn--block { width: 100%; }
+.site-btn--sm { min-height: 36px; padding: 0 14px; font-size: 13px; }
+
+.link-button {
+    background: none;
+    border: 0;
+    color: var(--muted);
+    padding: 8px 0;
+    cursor: pointer;
+}
+.link-button:hover { color: var(--accent-text); }
+
+.icon-button {
+    background: none;
+    border: 0;
+    color: var(--muted);
+    cursor: pointer;
+    min-width: var(--tap);
+    min-height: var(--tap);
+}
+.icon-button:hover { color: var(--accent-text); }
+
+/* ---------- Forms ---------- */
+/* Half-finished dark themes always show up here first, so every control
+   is repainted rather than relying on inheritance. */
+
+input,
+select,
+textarea,
+.form-control {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-height: var(--tap);
+    padding: 10px 14px;
+    width: 100%;
+}
+textarea, textarea.form-control { min-height: 110px; }
+
+input:focus,
+select:focus,
+textarea:focus,
+.form-control:focus {
+    background: var(--surface-2);
+    color: var(--text);
+    border-color: var(--accent-text);
+    box-shadow: none;
+}
+
+::placeholder { color: var(--muted); opacity: 1; }
+
+/* Autofill repaints inputs white in WebKit; the inset shadow trick is the
+   only reliable way to keep them dark. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text);
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset;
+}
+
+select option { background: var(--surface-2); color: var(--text); }
+
+.form-hint { display: block; color: var(--muted); font-size: 12px; margin-top: 6px; }
+.form-error { display: block; color: var(--accent-text); font-size: 12px; margin-top: 6px; }
+
+.checkout__input { margin-bottom: 20px; }
+.checkout__input label { color: var(--text); display: block; margin-bottom: 8px; }
+.checkout__input label span { color: var(--accent-text); }
+.checkout__input--check { display: flex; align-items: center; gap: 10px; }
+.checkout__input--check input { width: auto; min-height: auto; }
+
+/* nice-select renders its own dropdown, so it needs repainting outright. */
+.nice-select {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    min-height: var(--tap);
+    line-height: calc(var(--tap) - 2px);
+}
+/* nice-select paints the selected label into its own .current span, which
+   keeps the theme's #111 unless targeted directly. */
+.nice-select .current,
+.shop__product__option__right .nice-select span { color: var(--text); }
+.nice-select:after { border-bottom-color: var(--muted); border-right-color: var(--muted); }
+.nice-select .list {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+}
+.nice-select .option { color: var(--text); }
+.nice-select .option:hover,
+.nice-select .option.focus,
+.nice-select .option.selected.focus { background: var(--bg); color: var(--accent-text); }
+
+/* ---------- Hero / sections ---------- */
+
+/* The theme parks hero copy at `top: 100px; opacity: 0` and reveals it when
+   the owl carousel marks a slide active. We render a static hero with no
+   carousel, so without this it would never appear at all. */
+.hero__text--home h2,
+.hero__text--home p,
+.hero__text--home span,
+.hero__text--home .primary-btn {
+    top: 0;
+    opacity: 1;
+    visibility: visible;
+}
+.hero__text--home h2 { color: var(--text); font-size: 42px; line-height: 1.25; }
+.hero__text--home p { color: var(--muted); }
+
+.hero__text--home { padding: 70px 0; }
+.hero__text--home span {
+    color: var(--accent-text);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 13px;
+}
+.hero__text--home h2 { margin: 16px 0; line-height: 1.25; }
+.hero__text--home p { margin-bottom: 26px; max-width: 46ch; }
+
+.section-title h4, .section-title h5 { color: var(--text); }
+
+/* The theme gives this section a cream #f3f2ee band. */
+.categories { background: var(--bg); padding: 60px 0 40px; overflow: visible; }
+
+/* Category tiles carry white text over an arbitrary product photo, so the
+   contrast can't be guaranteed by colour alone — a scrim does it instead. */
+.categories__item {
+    border-radius: var(--radius);
+    position: relative;
+    overflow: hidden;
+    background-color: var(--surface-2);
+    background-size: cover;
+    background-position: center;
+    min-height: 260px;
+    margin-bottom: 24px;
+}
+.categories__item:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, .85) 0%, rgba(0, 0, 0, .15) 60%);
+}
+.categories__item h5 {
+    position: absolute;
+    left: 20px;
+    bottom: 18px;
+    margin: 0;
+    z-index: 1;
+}
+.categories__item h5 a { color: #ffffff; }
+.categories__item h5 a:hover { color: var(--accent-text); }
+
+/* ---------- Product cards ---------- */
+
+.product__item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+/* Product photos are shot on light backgrounds; a surface tile stops them
+   floating on the black page. */
+.product__item__pic {
+    background-color: var(--surface-2);
+    background-size: cover;
+    background-position: center;
+    height: 220px;
+    position: relative;
+}
+
+.product__item__text { padding: 16px; }
+.product__item__text h6 { margin-bottom: 8px; font-size: 15px; }
+
+/* The theme hides every anchor in this block (it uses them for a hover-only
+   "add to cart" overlay). Our product name is a link, so it has to be put
+   back into normal flow or the card renders with no title at all. */
+.product__item__text h6 a {
+    position: static;
+    opacity: 1;
+    visibility: visible;
+    color: var(--text);
+}
+.product__item__text h6 a:hover { color: var(--accent-text); }
+.product__item__text h5 { color: var(--accent-text); font-size: 17px; margin: 0; }
+
+.product__item__text .add-cart {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--muted);
+    font-size: 13px;
+    display: inline-block;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+.product__item__text .add-cart:hover { color: var(--accent-text); }
+.add-cart--disabled { color: var(--muted); opacity: .6; cursor: not-allowed; }
+
+.product__item.out-of-stock .product__item__pic { opacity: .55; }
+
+.product__item .label,
+.label--muted {
+    background: var(--accent-btn);
+    color: var(--on-accent);
+    border-radius: var(--radius);
+    padding: 4px 10px;
+    font-size: 11px;
+    position: absolute;
+    top: 10px; left: 10px;
+    z-index: 2;
+}
+.label--muted { background: var(--surface-2); color: var(--muted); }
+
+.product__hover li a,
+.product__hover li .icon-button { background: var(--surface-2); }
+
+.rating i { color: var(--accent-text); }
+
+/* ---------- Product detail ---------- */
+
+.product__details__pic__item img {
+    width: 100%;
+    background: var(--surface-2);
+    border-radius: var(--radius);
+}
+
+.product__details__thumbs {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+.product__details__thumbs .thumb {
+    flex: 0 0 76px;
+    padding: 0;
+    background: var(--surface-2);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+.product__details__thumbs .thumb.is-active { border-color: var(--accent-text); }
+.product__details__thumbs .thumb img { width: 100%; display: block; }
+
+/* Theme sets these to #0d0d0d and #3d3d3d respectively. */
+.product__details__text h3 { color: var(--text); margin-bottom: 12px; }
+.product__details__text .rating span { color: var(--muted); }
+.product__details__price { color: var(--accent-text); font-size: 26px; font-weight: 700; margin: 14px 0; }
+.product__details__desc { color: var(--muted); margin: 18px 0; }
+.product__details__desc * { color: var(--muted); }
+
+.stock-note { font-size: 14px; margin-bottom: 10px; }
+.stock-note--in { color: #4caf50; }
+.stock-note--out { color: var(--accent-text); }
+
+.product__details__cart {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+.product__details__cart .quantity { flex: 0 0 100px; }
+.product__details__cart .quantity input { text-align: center; }
+
+.product__details__meta { list-style: none; padding: 0; margin-top: 20px; }
+.product__details__meta li { color: var(--muted); padding: 6px 0; }
+.product__details__meta li b { color: var(--text); margin-right: 8px; }
+
+/* ---------- Reviews ---------- */
+
+.product__details__reviews { margin-top: 50px; }
+.review-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+}
+.review-item__head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.review-item__head strong { color: var(--text); }
+.review-item__head small { color: var(--muted); }
+.review-item p { margin: 10px 0 0; }
+
+.review-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 20px;
+}
+.review-form .form-group { margin-bottom: 16px; }
+.review-form label { color: var(--text); display: block; margin-bottom: 8px; }
+
+/* ---------- Shop sidebar & filters ---------- */
+
+.shop__sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+}
+.sidebar__title { color: var(--text); font-size: 16px; margin: 20px 0 12px; }
+.shop__sidebar__categories ul { list-style: none; padding: 0; margin: 0; }
+.shop__sidebar__categories ul li { padding: 4px 0; }
+.shop__sidebar__categories ul li a { color: var(--muted); display: block; padding: 6px 0; }
+.shop__sidebar__categories ul li.active a,
+.shop__sidebar__categories ul li a:hover { color: var(--accent-text); }
+
+.shop__sidebar__search form { display: flex; gap: 8px; }
+.shop__sidebar__search button {
+    background: var(--accent-btn);
+    border: 0;
+    color: var(--on-accent);
+    border-radius: var(--radius);
+    min-width: var(--tap);
+    min-height: var(--tap);
+    cursor: pointer;
+}
+
+.price-filter__row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.price-filter__row span { color: var(--muted); }
+
+.filter-toggle {
+    width: 100%;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-height: var(--tap);
+    margin-bottom: 18px;
+    cursor: pointer;
+}
+
+.shop__product__option {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 24px;
+}
+/* The theme colours this result count #111; it is invisible until overridden
+   at matching specificity. */
+.shop__product__option .shop__product__option__left p { color: var(--muted); margin: 0; }
+.shop__product__option p { margin: 0; }
+.shop__product__option__right { display: flex; justify-content: flex-end; }
+
+.product__pagination { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+.product__pagination a {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    min-width: var(--tap);
+    min-height: var(--tap);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.product__pagination a.active,
+.product__pagination a:hover {
+    background: var(--accent-btn);
+    border-color: var(--accent-text);
+    color: var(--on-accent);
+}
+
+/* ---------- Cart ---------- */
+
+.cart-lines { display: grid; gap: 14px; }
+
+/* A table would force a sideways scroll on a phone, so each line is a card. */
+.cart-line {
+    display: grid;
+    grid-template-columns: 84px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+}
+.cart-line__pic img {
+    width: 84px; height: 84px;
+    object-fit: cover;
+    background: var(--surface-2);
+    border-radius: var(--radius);
+}
+.cart-line__body h6 { margin: 0 0 6px; font-size: 15px; }
+.cart-line__unit { color: var(--muted); font-size: 13px; display: block; margin-bottom: 10px; }
+.cart-line__qty { display: flex; gap: 8px; align-items: center; }
+.cart-line__qty input { width: 80px; text-align: center; }
+.cart-line__end { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.cart-line__total { color: var(--accent-text); font-weight: 700; white-space: nowrap; }
+
+.cart__total {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+}
+/* The theme hard-codes #111 headings and the low-contrast #e53637 on these
+   totals; both need restating at matching specificity. */
+.cart__total h6 { color: var(--text); margin-bottom: 14px; }
+.cart__total ul li span { color: var(--accent-text); float: none; }
+.cart__total ul { list-style: none; padding: 0; margin: 0 0 18px; }
+.cart__total ul li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.cart__total ul li:last-child { border-bottom: 0; }
+.cart__total ul li.grand-total,
+.checkout__total__all li.grand-total {
+    color: var(--text);
+    font-weight: 700;
+    font-size: 17px;
+}
+.cart__total ul li.grand-total span,
+.checkout__total__all li.grand-total span { color: var(--accent-text); }
+.cart__total .primary-btn { width: 100%; }
+
+.shopping__cart__btns { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+
+/* ---------- Checkout ---------- */
+
+.checkout__form { margin-top: 10px; }
+.checkout__form h4 {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+    margin-bottom: 24px;
+}
+
+.checkout__order {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+}
+.checkout__order__products { color: var(--text); font-weight: 700; display: flex; justify-content: space-between; }
+.checkout__total__products,
+.checkout__total__all { list-style: none; padding: 0; margin: 14px 0; }
+.checkout__total__products li,
+.checkout__total__all li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.checkout__total__products li span { color: var(--muted); float: none; }
+.checkout__total__all li span { color: var(--accent-text); float: none; }
+
+.coupon-remove-row { justify-content: flex-end !important; border-bottom: 0 !important; }
+.coupon-remove { color: var(--accent-text); font-size: 13px; }
+
+.checkout__order .checkout__pay-note,
+.checkout__pay-note {
+    font-size: 13px;
+    color: var(--muted);
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    margin: 16px 0;
+}
+
+.coupon-form { margin-top: 30px; }
+.coupon-form label { color: var(--text); display: block; margin-bottom: 8px; }
+.coupon-form__row { display: flex; gap: 10px; max-width: 420px; }
+
+/* ---------- Payment state pages ---------- */
+
+.payment-state__card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 28px;
+    text-align: center;
+}
+.payment-state__card--success { border-color: #2e7d32; }
+.payment-state__card--failed { border-color: var(--accent-text); }
+
+.payment-state__icon { font-size: 54px; display: block; margin-bottom: 16px; }
+.payment-state__card--success .payment-state__icon { color: #4caf50; }
+.payment-state__card--failed .payment-state__icon { color: var(--accent-text); }
+
+.payment-state__lead { color: var(--text); margin: 14px 0; }
+.payment-state__lead strong { color: var(--accent-text); }
+.payment-state__status { color: var(--muted); font-size: 15px; }
+.payment-state__hint { color: var(--muted); font-size: 13px; }
+
+.payment-state__spinner {
+    width: 54px; height: 54px;
+    margin: 0 auto 20px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent-text);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+.payment-state__spinner.is-done { animation: none; border-top-color: var(--border); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .payment-state__spinner { animation: none; }
+}
+
+.payment-state__meta { list-style: none; padding: 0; margin: 22px 0; text-align: left; }
+.payment-state__meta li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted);
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.payment-state__meta li span { color: var(--text); text-align: right; }
+
+.payment-state__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+/* ---------- Orders ---------- */
+
+.order-line {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+}
+.order-line__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.order-line__head h6 { margin: 0; }
+.order-line__body { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); margin-top: 10px; }
+.order-line__body strong { color: var(--accent-text); }
+
+.status-pill {
+    display: inline-block;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--muted);
+}
+.status-pill--paid { border-color: #2e7d32; color: #7bd08a; }
+.status-pill--pending { border-color: #a67c00; color: #e0b64a; }
+.status-pill--cancelled { border-color: var(--accent-text); color: var(--accent-text); }
+.status-pill--shipped,
+.status-pill--delivered { border-color: #1565c0; color: #7fb2ef; }
+
+/* ---------- Account ---------- */
+
+.auth-card { padding-top: 20px; }
+.auth-card__alt { font-size: 14px; margin-top: 14px; text-align: center; }
+.auth-card__alt a { color: var(--accent-text); }
+
+.address-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+}
+.address-card--default { border-color: var(--accent-text); }
+.address-card__head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.address-card__actions { display: flex; gap: 16px; }
+.address-card__actions a { color: var(--muted); font-size: 14px; }
+.address-card__actions a:hover { color: var(--accent-text); }
+
+/* ---------- About / contact ---------- */
+
+.about__text h4 { margin: 26px 0 12px; }
+.contact__widget {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 26px;
+    text-align: center;
+    margin-bottom: 24px;
+}
+.contact__widget span { font-size: 34px; color: var(--accent-text); display: block; margin-bottom: 12px; }
+
+/* ---------- Footer ---------- */
+
+.footer {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-top: 50px;
+}
+.footer__about p, .footer__widget ul li a { color: var(--muted); }
+.footer__widget h6 { color: var(--text); }
+.footer__widget ul li a:hover { color: var(--accent-text); }
+.footer__logo img { filter: invert(1) brightness(1.6); }
+
+.footer__newslatter form { display: flex; gap: 8px; }
+.footer__newslatter button {
+    background: var(--accent-btn);
+    border: 0;
+    color: var(--on-accent);
+    border-radius: var(--radius);
+    min-width: var(--tap);
+    min-height: var(--tap);
+    cursor: pointer;
+}
+
+.footer__copyright__text {
+    border-top: 1px solid var(--border);
+    margin-top: 30px;
+    padding: 22px 0;
+}
+.footer__copyright__text p { color: var(--muted); font-size: 13px; margin: 0; }
+.footer__copyright__text a,
+.footer__copyright__text p a { color: var(--accent-text); }
+
+/* ---------- Search overlay ---------- */
+
+.search-model { background: rgba(17, 17, 17, .97); }
+.search-model-form input {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--border);
+    border-radius: 0;
+    color: var(--text);
+    font-size: 24px;
+}
+.search-close-switch { background: var(--accent-btn); color: var(--on-accent); }
+
+/* ---------- Alerts, toasts, empty states ---------- */
+
+.site-messages { margin-top: 20px; }
+.alert {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    color: var(--text);
+}
+.alert-success { border-left-color: #4caf50; }
+.alert-error, .alert-danger { border-left-color: var(--accent-text); }
+.alert-warning { border-left-color: #e0b64a; }
+.alert-info { border-left-color: #7fb2ef; }
+.alert .close { color: var(--text); opacity: .7; text-shadow: none; }
+
+.empty-state {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 26px;
+    text-align: center;
+    color: var(--muted);
+}
+.empty-state a { color: var(--accent-text); }
+
+.toast-note {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--sticky-h) + 16px);
+    transform: translate(-50%, 12px);
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-left: 3px solid #4caf50;
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 1200;
+    max-width: calc(100vw - 32px);
+}
+.toast-note--error { border-left-color: var(--accent-text); }
+.toast-note.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- Sticky mobile action bar ---------- */
+/* Keeps the primary action reachable without scrolling back up. */
+
+.sticky-bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: var(--sticky-h);
+    padding: 0 16px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    /* Clear the iOS home indicator. */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.sticky-bar__price { color: var(--accent-text); font-weight: 700; font-size: 17px; }
+.sticky-bar .primary-btn { flex: 0 0 auto; }
+.sticky-bar form { margin: 0; }
+
+/* ---------- Mobile-first layout adjustments ---------- */
+/* Base styles above are the phone. These add back desktop affordances. */
+
+@media (max-width: 991px) {
+    /* Reserve room only on pages that actually have a sticky bar, so the
+       others don't end with a strip of dead space. */
+    body:has(.sticky-bar) { padding-bottom: calc(var(--sticky-h) + 16px); }
+
+    .spad { padding-top: 40px; padding-bottom: 40px; }
+
+    .hero__text--home { padding: 40px 0; }
+    .hero__text--home h2 { font-size: 30px; }
+
+    .product__item__pic { height: 170px; }
+
+    .cart-line { grid-template-columns: 64px 1fr; }
+    .cart-line__pic img { width: 64px; height: 64px; }
+    /* The price/remove column wraps under the body instead of squeezing it. */
+    .cart-line__end {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+    }
+
+    .shop__product__option__right { justify-content: flex-start; margin-top: 10px; }
+
+    .payment-state__card { padding: 30px 20px; }
+}
+
+@media (max-width: 575px) {
+    .product__item__pic { height: 150px; }
+    .product__item__text { padding: 12px; }
+    .product__item__text h6 { font-size: 14px; }
+
+    .product__details__cart { flex-direction: column; }
+    .product__details__cart .quantity { flex: 1 1 auto; }
+    .product__details__cart .primary-btn { width: 100%; }
+
+    .payment-state__actions .primary-btn,
+    .payment-state__actions .site-btn { width: 100%; }
+}
+
+@media (min-width: 992px) {
+    /* Bootstrap 4's .collapse hides the sidebar; force it visible on desktop
+       where it is a permanent column, not a collapsible panel. */
+    .shop__sidebar.collapse:not(.show) { display: block !important; }
+}

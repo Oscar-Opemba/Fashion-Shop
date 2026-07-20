@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Checkout' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="checkout spad">
+    <div class="container">
+        <div class="checkout__form">
+            <h4>Delivery details</h4>
+            <form action="{% url 'orders:checkout' %}" method="post" id="checkoutForm">
+                {% csrf_token %}
+                <div class="row">
+                    {# Single column at every breakpoint: multi-column address #}
+                    {# forms are the classic mobile checkout failure.          #}
+                    <div class="col-lg-7 col-md-12">
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+
+                        {% for field in form %}
+                            <div class="checkout__input">
+                                <label for="{{ field.id_for_label }}">
+                                    {{ field.label }}{% if field.field.required %}<span>*</span>{% endif %}
+                                </label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <small class="form-hint">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <small class="form-error">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-lg-5 col-md-12">
+                        <div class="checkout__order">
+                            <h4>Your order</h4>
+                            <div class="checkout__order__products">
+                                Products <span>Total</span>
+                            </div>
+                            <ul class="checkout__total__products">
+                                {% for item in cart %}
+                                    <li>
+                                        {{ forloop.counter }}. {{ item.product.name }} &times; {{ item.quantity }}
+                                        <span>KES {{ item.total_price|floatformat:2 }}</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            <ul class="checkout__total__all">
+                                <li>Subtotal <span>KES {{ subtotal|floatformat:2 }}</span></li>
+                                {% if coupon %}
+                                    <li>
+                                        Coupon {{ coupon.code }} (&minus;{{ coupon.discount_percent }}%)
+                                        <span>&minus;KES {{ discount|floatformat:2 }}</span>
+                                    </li>
+                                    <li class="coupon-remove-row">
+                                        <a href="{% url 'orders:coupon_remove' %}" class="coupon-remove">Remove coupon</a>
+                                    </li>
+                                {% endif %}
+                                <li class="grand-total">Total <span>KES {{ total|floatformat:2 }}</span></li>
+                            </ul>
+
+                            <p class="checkout__pay-note">
+                                You will get an M-Pesa prompt on the number above.
+                                Enter your PIN to complete the order.
+                            </p>
+
+                            <button type="submit" class="site-btn site-btn--block">Pay with M-Pesa</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            {% if not coupon %}
+                <form action="{% url 'orders:coupon_apply' %}" method="post" class="coupon-form">
+                    {% csrf_token %}
+                    <label for="id_code">Have a coupon?</label>
+                    <div class="coupon-form__row">
+                        {{ coupon_form.code }}
+                        <button type="submit" class="site-btn">Apply</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block sticky_bar %}
+<div class="sticky-bar d-lg-none">
+    <span class="sticky-bar__price">KES {{ total|floatformat:2 }}</span>
+    <button type="submit" form="checkoutForm" class="primary-btn">Pay with M-Pesa</button>
+</div>
+{% endblock %}

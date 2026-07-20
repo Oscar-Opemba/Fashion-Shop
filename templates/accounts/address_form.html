@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title=title crumb_parent='My account' crumb_parent_url='/accounts/profile/' %}
+        {% include 'includes/breadcrumb.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="checkout spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-9">
+                <div class="checkout__form">
+                    <h4>{{ title }}</h4>
+                    <form method="post">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="checkout__input{% if field.name == 'is_default' %} checkout__input--check{% endif %}">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% for error in field.errors %}
+                                    <small class="form-error">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="site-btn">Save</button>
+                        <a href="{% url 'accounts:profile' %}" class="link-button">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

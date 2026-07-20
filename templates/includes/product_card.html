@@ -1,0 +1,34 @@
+{% load static %}
+<div class="product__item{% if not product.in_stock %} out-of-stock{% endif %}">
+    <div class="product__item__pic set-bg"
+         data-setbg="{% if product.image %}{{ product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}">
+        {% if not product.in_stock %}<span class="label label--muted">Sold out</span>{% endif %}
+        <ul class="product__hover">
+            {% if user.is_authenticated %}
+                <li>
+                    <form action="{% url 'catalog:wishlist_toggle' product.slug %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="icon-button" aria-label="Toggle wishlist">
+                            <img src="{% static 'img/icon/heart.png' %}" alt="">
+                        </button>
+                    </form>
+                </li>
+            {% endif %}
+            <li><a href="{{ product.get_absolute_url }}" aria-label="View {{ product.name }}">
+                <img src="{% static 'img/icon/search.png' %}" alt=""></a></li>
+        </ul>
+    </div>
+    <div class="product__item__text">
+        <h6><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h6>
+        {% if product.in_stock %}
+            <form action="{% url 'cart:add' product.id %}" method="post" data-cart-form>
+                {% csrf_token %}
+                <input type="hidden" name="quantity" value="1">
+                <button type="submit" class="add-cart">+ Add To Cart</button>
+            </form>
+        {% else %}
+            <span class="add-cart add-cart--disabled">Out of stock</span>
+        {% endif %}
+        <h5>KES {{ product.price|floatformat:2 }}</h5>
+    </div>
+</div>

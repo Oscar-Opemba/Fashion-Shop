@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Contact us{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Contact' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="contact spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-4 col-md-6">
+                <div class="contact__widget">
+                    <span class="icon_phone"></span>
+                    <h4>Phone</h4>
+                    <p>+254 700 000 000</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="contact__widget">
+                    <span class="icon_pin_alt"></span>
+                    <h4>Address</h4>
+                    <p>Nairobi, Kenya</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="contact__widget">
+                    <span class="icon_mail_alt"></span>
+                    <h4>Email</h4>
+                    <p>hello@example.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

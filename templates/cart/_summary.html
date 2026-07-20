@@ -1,0 +1,9 @@
+{# Re-rendered and swapped in after an ajax cart update. #}
+<div class="cart__total">
+    <h6>Cart total</h6>
+    <ul>
+        <li>Subtotal <span>KES {{ cart.get_total_price|floatformat:2 }}</span></li>
+        <li>Total <span>KES {{ cart.get_total_price|floatformat:2 }}</span></li>
+    </ul>
+    <a href="{% url 'orders:checkout' %}" class="primary-btn">Proceed to checkout</a>
+</div>

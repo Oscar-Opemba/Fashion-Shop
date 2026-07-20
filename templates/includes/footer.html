@@ -1,0 +1,60 @@
+{% load static %}
+<footer class="footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="footer__about">
+                    <div class="footer__logo">
+                        <a href="{% url 'core:home' %}"><img src="{% static 'img/footer-logo.png' %}" alt=""></a>
+                    </div>
+                    <p>Shop online and pay with M-Pesa. Delivery countrywide.</p>
+                </div>
+            </div>
+            <div class="col-lg-2 offset-lg-1 col-md-3 col-sm-6">
+                <div class="footer__widget">
+                    <h6>Shop</h6>
+                    <ul>
+                        <li><a href="{% url 'catalog:product_list' %}">All products</a></li>
+                        {% for category in nav_categories|slice:":3" %}
+                            <li><a href="{{ category.get_absolute_url }}">{{ category.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-3 col-sm-6">
+                <div class="footer__widget">
+                    <h6>Help</h6>
+                    <ul>
+                        <li><a href="{% url 'core:contact' %}">Contact us</a></li>
+                        <li><a href="{% url 'core:about' %}">About us</a></li>
+                        <li><a href="{% url 'orders:history' %}">Track my order</a></li>
+                        <li><a href="{% url 'cart:detail' %}">My cart</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-lg-3 offset-lg-1 col-md-6 col-sm-6">
+                <div class="footer__widget">
+                    <h6>Newsletter</h6>
+                    <div class="footer__newslatter">
+                        <p>Be the first to know about new arrivals and promos.</p>
+                        <form action="{% url 'core:contact' %}" method="get">
+                            <input type="email" name="email" placeholder="Your email" aria-label="Your email">
+                            <button type="submit" aria-label="Subscribe"><span class="icon_mail_alt"></span></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <div class="footer__copyright__text">
+                    {# Template is licensed CC BY 3.0; the Colorlib credit must stay. #}
+                    <p>Copyright &copy; {% now "Y" %} All rights reserved | This template is made with
+                        <i class="fa fa-heart-o" aria-hidden="true"></i> by
+                        <a href="https://colorlib.com" target="_blank" rel="noopener">Colorlib</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>

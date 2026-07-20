@@ -1,0 +1,17 @@
+{# allauth renders its auth pages through this, so they inherit our theme. #}
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="checkout spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-8">
+                <div class="checkout__form auth-card">
+                    <h4>{% block auth_title %}{% endblock %}</h4>
+                    {% block auth_content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

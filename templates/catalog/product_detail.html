@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }}{% endblock %}
+{% block meta_description %}{{ product.name }} — KES {{ product.price|floatformat:2 }}{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title=product.name crumb_parent='Shop' crumb_parent_url='/shop/' %}
+        {% include 'includes/breadcrumb.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="product-details spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="product__details__pic__item">
+                    <img src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}"
+                         alt="{{ product.name }}" id="mainProductImage">
+                </div>
+                {% if product.images.all %}
+                    <div class="product__details__thumbs">
+                        <button type="button" class="thumb is-active"
+                                data-full="{{ product.image.url }}">
+                            <img src="{{ product.image.url }}" alt="">
+                        </button>
+                        {% for extra in product.images.all %}
+                            <button type="button" class="thumb" data-full="{{ extra.image.url }}">
+                                <img src="{{ extra.image.url }}" alt="{{ extra.alt }}">
+                            </button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-lg-6">
+                <div class="product__details__text">
+                    <h3>{{ product.name }}</h3>
+                    <div class="rating">
+                        {% for i in "12345" %}
+                            {% if average_rating and forloop.counter <= average_rating %}
+                                <i class="fa fa-star"></i>
+                            {% else %}
+                                <i class="fa fa-star-o"></i>
+                            {% endif %}
+                        {% endfor %}
+                        <span>({{ review_count }} review{{ review_count|pluralize }})</span>
+                    </div>
+                    <div class="product__details__price">KES {{ product.price|floatformat:2 }}</div>
+
+                    {% if product.in_stock %}
+                        <p class="stock-note stock-note--in">In stock &middot; {{ product.stock }} available</p>
+                    {% else %}
+                        <p class="stock-note stock-note--out">Out of stock</p>
+                    {% endif %}
+
+                    <div class="product__details__desc">{{ product.description|safe }}</div>
+
+                    {% if product.in_stock %}
+                        <form action="{% url 'cart:add' product.id %}" method="post"
+                              class="product__details__cart" data-cart-form>
+                            {% csrf_token %}
+                            <div class="quantity">
+                                <label for="quantity" class="sr-only">Quantity</label>
+                                <input type="number" id="quantity" name="quantity" value="1"
+                                       min="1" max="{{ product.stock }}" inputmode="numeric">
+                            </div>
+                            <button type="submit" class="primary-btn">Add to cart</button>
+                        </form>
+                    {% endif %}
+
+                    {% if user.is_authenticated %}
+                        <form action="{% url 'catalog:wishlist_toggle' product.slug %}" method="post"
+                              class="product__details__wishlist">
+                            {% csrf_token %}
+                            <button type="submit" class="link-button">
+                                <span class="icon_heart{% if not in_wishlist %}_alt{% endif %}"></span>
+                                {% if in_wishlist %}Remove from wishlist{% else %}Add to wishlist{% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <ul class="product__details__meta">
+                        <li><b>Category</b> <span>{{ product.category.name }}</span></li>
+                        <li><b>Payment</b> <span>M-Pesa</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="product__details__reviews">
+                    <h5>Reviews ({{ review_count }})</h5>
+
+                    {% for review in reviews %}
+                        <div class="review-item">
+                            <div class="review-item__head">
+                                <strong>{{ review.user.get_full_name|default:review.user.email }}</strong>
+                                <span class="rating">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= review.rating %}
+                                            <i class="fa fa-star"></i>
+                                        {% else %}
+                                            <i class="fa fa-star-o"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
+                                <small>{{ review.created|date:"j M Y" }}</small>
+                            </div>
+                            <p>{{ review.comment }}</p>
+                        </div>
+                    {% empty %}
+                        <p class="empty-state">No reviews yet. Be the first.</p>
+                    {% endfor %}
+
+                    {% if user.is_authenticated %}
+                        {% if already_reviewed %}
+                            <p class="empty-state">You have already reviewed this product.</p>
+                        {% else %}
+                            <form action="{% url 'catalog:review_add' product.slug %}" method="post"
+                                  class="review-form">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="id_rating">Rating</label>
+                                    {{ review_form.rating }}
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_comment">Your review</label>
+                                    {{ review_form.comment }}
+                                </div>
+                                <button type="submit" class="site-btn">Post review</button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <p class="empty-state">
+                            <a href="{% url 'account_login' %}?next={{ request.path }}">Sign in</a>
+                            to leave a review.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if related_products %}
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="section-title related__title">
+                        <h5>Related products</h5>
+                    </div>
+                </div>
+                {% for product in related_products %}
+                    <div class="col-6 col-md-4 col-lg-3">
+                        {% include 'includes/product_card.html' %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block sticky_bar %}
+    {% if product.in_stock %}
+        {# Mobile only: keeps the primary action reachable without scrolling. #}
+        <div class="sticky-bar d-lg-none">
+            <span class="sticky-bar__price">KES {{ product.price|floatformat:2 }}</span>
+            <form action="{% url 'cart:add' product.id %}" method="post" data-cart-form>
+                {% csrf_token %}
+                <input type="hidden" name="quantity" value="1">
+                <button type="submit" class="primary-btn">Add to cart</button>
+            </form>
+        </div>
+    {% endif %}
+{% endblock %}

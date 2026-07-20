@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}My orders{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='My orders' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="shopping-cart spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                {% for order in orders %}
+                    <div class="order-line">
+                        <div class="order-line__head">
+                            <h6><a href="{% url 'orders:detail' order.pk %}">Order #{{ order.pk }}</a></h6>
+                            <span class="status-pill status-pill--{{ order.status }}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="order-line__body">
+                            <span>{{ order.created|date:"j M Y, H:i" }}</span>
+                            <span>{{ order.items.count }} item{{ order.items.count|pluralize }}</span>
+                            <strong>KES {{ order.get_total|floatformat:2 }}</strong>
+                        </div>
+                        {% if not order.paid %}
+                            <form action="{% url 'payments:retry' order.pk %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="site-btn site-btn--sm">Complete payment</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <p class="empty-state">
+                        You have not placed any orders yet.
+                        <a href="{% url 'catalog:product_list' %}">Start shopping</a>
+                    </p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

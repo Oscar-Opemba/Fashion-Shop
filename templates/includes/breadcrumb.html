@@ -1,0 +1,16 @@
+<section class="breadcrumb-option">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="breadcrumb__text">
+                    <h4>{{ crumb_title }}</h4>
+                    <div class="breadcrumb__links">
+                        <a href="{% url 'core:home' %}">Home</a>
+                        {% if crumb_parent %}<a href="{{ crumb_parent_url }}">{{ crumb_parent }}</a>{% endif %}
+                        <span>{{ crumb_title }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

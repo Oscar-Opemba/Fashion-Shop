@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}My account{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='My account' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="checkout spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="checkout__form">
+                    <h4>Profile</h4>
+                    <form action="{% url 'accounts:profile' %}" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="checkout__input">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% for error in field.errors %}
+                                    <small class="form-error">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="site-btn">Save changes</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="checkout__form">
+                    <h4>Addresses</h4>
+                    {% for address in addresses %}
+                        <div class="address-card{% if address.is_default %} address-card--default{% endif %}">
+                            <div class="address-card__head">
+                                <strong>{{ address.label }}</strong>
+                                {% if address.is_default %}<span class="status-pill">Default</span>{% endif %}
+                            </div>
+                            <p>
+                                {{ address.full_name }}<br>
+                                {{ address.street }}<br>
+                                {{ address.town }}, {{ address.county }}
+                            </p>
+                            <div class="address-card__actions">
+                                <a href="{% url 'accounts:address_edit' address.pk %}">Edit</a>
+                                <a href="{% url 'accounts:address_delete' address.pk %}">Delete</a>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="empty-state">No saved addresses yet.</p>
+                    {% endfor %}
+
+                    <a href="{% url 'accounts:address_create' %}" class="site-btn">Add address</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

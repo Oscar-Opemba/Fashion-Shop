@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment not completed{% endblock %}
+
+{% block content %}
+<section class="payment-state spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 col-md-9">
+                <div class="payment-state__card payment-state__card--failed">
+                    <span class="payment-state__icon icon_close_alt2"></span>
+                    <h3>Payment not completed</h3>
+
+                    <p class="payment-state__lead">
+                        {% if payment.result_desc %}
+                            {{ payment.result_desc }}
+                        {% else %}
+                            We could not confirm your M-Pesa payment for order #{{ order.pk }}.
+                        {% endif %}
+                    </p>
+
+                    <p class="payment-state__hint">
+                        Your cart is still intact and nothing has been charged.
+                    </p>
+
+                    <div class="payment-state__actions">
+                        <form action="{% url 'payments:retry' order.pk %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="primary-btn">Try again</button>
+                        </form>
+                        <a href="{% url 'cart:detail' %}" class="site-btn">Back to cart</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

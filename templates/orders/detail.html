@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Order #{{ order.pk }}{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title=order crumb_parent='My orders' crumb_parent_url='/orders/' %}
+        {% include 'includes/breadcrumb.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="shopping-cart spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="cart-lines">
+                    {% for item in order.items.all %}
+                        <div class="cart-line">
+                            <div class="cart-line__body">
+                                <h6><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></h6>
+                                <span class="cart-line__unit">
+                                    KES {{ item.price|floatformat:2 }} &times; {{ item.quantity }}
+                                </span>
+                            </div>
+                            <div class="cart-line__end">
+                                <span class="cart-line__total">KES {{ item.get_cost|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="cart__total">
+                    <h6>Order summary</h6>
+                    <ul>
+                        <li>Status <span class="status-pill status-pill--{{ order.status }}">
+                            {{ order.get_status_display }}</span></li>
+                        <li>Placed <span>{{ order.created|date:"j M Y, H:i" }}</span></li>
+                        <li>Subtotal <span>KES {{ order.get_subtotal|floatformat:2 }}</span></li>
+                        {% if order.discount_percent %}
+                            <li>Discount ({{ order.discount_percent }}%)
+                                <span>&minus;KES {{ order.get_discount|floatformat:2 }}</span></li>
+                        {% endif %}
+                        <li class="grand-total">Total <span>KES {{ order.get_total|floatformat:2 }}</span></li>
+                        {% if order.payment.mpesa_receipt %}
+                            <li>M-Pesa receipt <span>{{ order.payment.mpesa_receipt }}</span></li>
+                        {% endif %}
+                    </ul>
+
+                    <h6 class="mt-4">Delivery</h6>
+                    <ul>
+                        <li>{{ order.full_name }}</li>
+                        <li>{{ order.street }}</li>
+                        <li>{{ order.town }}, {{ order.county }}</li>
+                        <li>{{ order.phone }}</li>
+                    </ul>
+
+                    {% if not order.paid %}
+                        <form action="{% url 'payments:retry' order.pk %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="primary-btn">Complete payment</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

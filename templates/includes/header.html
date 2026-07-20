@@ -1,0 +1,83 @@
+{% load static %}
+<header class="header">
+    <div class="header__top">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-6 col-md-7">
+                    <div class="header__top__left">
+                        <p>Pay with M-Pesa. Delivery countrywide.</p>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-md-5">
+                    <div class="header__top__right">
+                        <div class="header__top__links">
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'accounts:profile' %}">My account</a>
+                                <a href="{% url 'orders:history' %}">My orders</a>
+                                <form action="{% url 'account_logout' %}" method="post" class="header__logout">
+                                    {% csrf_token %}
+                                    <button type="submit">Sign out</button>
+                                </form>
+                            {% else %}
+                                <a href="{% url 'account_login' %}">Sign in</a>
+                                <a href="{% url 'account_signup' %}">Register</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3 col-md-3">
+                <div class="header__logo">
+                    <a href="{% url 'core:home' %}"><img src="{% static 'img/logo.png' %}" alt="Home"></a>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-6">
+                <nav class="header__menu mobile-menu">
+                    <ul>
+                        <li{% if request.resolver_match.view_name == 'core:home' %} class="active"{% endif %}>
+                            <a href="{% url 'core:home' %}">Home</a>
+                        </li>
+                        <li{% if request.resolver_match.app_name == 'catalog' %} class="active"{% endif %}>
+                            <a href="{% url 'catalog:product_list' %}">Shop</a>
+                        </li>
+                        <li><a href="#">Categories</a>
+                            <ul class="dropdown">
+                                {% for category in nav_categories %}
+                                    <li><a href="{{ category.get_absolute_url }}">{{ category.name }}</a></li>
+                                {% empty %}
+                                    <li><a href="{% url 'catalog:product_list' %}">All products</a></li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                        <li{% if request.resolver_match.view_name == 'core:about' %} class="active"{% endif %}>
+                            <a href="{% url 'core:about' %}">About</a>
+                        </li>
+                        <li{% if request.resolver_match.view_name == 'core:contact' %} class="active"{% endif %}>
+                            <a href="{% url 'core:contact' %}">Contact</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="col-lg-3 col-md-3">
+                <div class="header__nav__option">
+                    <a href="#" class="search-switch" aria-label="Search">
+                        <img src="{% static 'img/icon/search.png' %}" alt=""></a>
+                    <a href="{% url 'catalog:wishlist' %}" aria-label="Wishlist">
+                        <img src="{% static 'img/icon/heart.png' %}" alt="">
+                        {% if wishlist_count %}<span>{{ wishlist_count }}</span>{% endif %}
+                    </a>
+                    <a href="{% url 'cart:detail' %}" aria-label="Cart">
+                        <img src="{% static 'img/icon/cart.png' %}" alt="">
+                        <span data-cart-count>{{ cart|length }}</span>
+                    </a>
+                    <div class="price" data-cart-total>KES {{ cart.get_total_price|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="canvas__open"><i class="fa fa-bars"></i></div>
+    </div>
+</header>

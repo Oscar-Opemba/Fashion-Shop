@@ -1,0 +1,31 @@
+{% extends 'account/base_entrance.html' %}
+
+{% block title %}Sign in{% endblock %}
+{% block auth_title %}Sign in{% endblock %}
+
+{% block auth_content %}
+<form method="post" action="{% url 'account_login' %}">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+        <div class="checkout__input">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+        </div>
+    {% endfor %}
+    {% if redirect_field_value %}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+    {% endif %}
+    <button type="submit" class="site-btn site-btn--block">Sign in</button>
+</form>
+
+<p class="auth-card__alt">
+    <a href="{% url 'account_reset_password' %}">Forgot your password?</a>
+</p>
+<p class="auth-card__alt">
+    New here? <a href="{% url 'account_signup' %}">Create an account</a>
+</p>
+{% endblock %}
