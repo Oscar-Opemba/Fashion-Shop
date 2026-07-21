@@ -15,6 +15,22 @@ from django.db import transaction
 
 from catalog.models import Category, Product
 
+
+def needs_image(field):
+    """True when a field has no file, or names one that has gone missing.
+
+    media/ is gitignored, so a clone starts with catalog rows pointing at
+    photos that were never checked in. Without this the cards render but
+    every image 404s, which reads as the products being invisible.
+    """
+    if not field:
+        return True
+    try:
+        return not field.storage.exists(field.name)
+    except (ValueError, OSError):
+        return True
+
+
 CATEGORIES = [
     ('Jackets', 'Outerwear for every season.'),
     ('Shirts', 'Everyday and occasion shirts.'),
@@ -84,7 +100,7 @@ class Command(BaseCommand):
             category, created = Category.objects.get_or_create(name=name)
             # Give each category a distinct tile image, otherwise the home page
             # shows the same fallback photo three times over.
-            if images and not category.image:
+            if images and needs_image(category.image):
                 source = images[(index * 3) % len(images)]
                 with source.open('rb') as fh:
                     category.image.save(f'category-{source.name}', File(fh), save=True)
@@ -92,8 +108,17 @@ class Command(BaseCommand):
         self.stdout.write(f'Categories: {len(categories)}')
 
         created = 0
+        repaired = 0
         for index, (category_name, name, price) in enumerate(PRODUCTS):
-            if Product.objects.filter(name=name).exists():
+            existing = Product.objects.filter(name=name).first()
+            if existing is not None:
+                # Already seeded, but the photo may have gone missing with
+                # media/. Re-attach it rather than skipping the row entirely.
+                if images and needs_image(existing.image):
+                    source = images[index % len(images)]
+                    with source.open('rb') as fh:
+                        existing.image.save(source.name, File(fh), save=True)
+                    repaired += 1
                 continue
 
             product = Product(
@@ -114,6 +139,8 @@ class Command(BaseCommand):
             created += 1
 
         self.stdout.write(f'Products created: {created}')
+        if repaired:
+            self.stdout.write(f'Product photos restored: {repaired}')
 
         User = get_user_model()
         if not User.objects.filter(is_superuser=True).exists():

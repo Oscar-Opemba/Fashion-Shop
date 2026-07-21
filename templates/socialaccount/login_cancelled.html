@@ -1,0 +1,10 @@
+{% extends 'account/base_entrance.html' %}
+
+{% block title %}Sign-in cancelled{% endblock %}
+{% block auth_title %}Sign-in cancelled{% endblock %}
+
+{% block auth_content %}
+<p class="auth-card__lead">You cancelled the sign-in, so nothing was changed.</p>
+
+<a href="{% url 'account_login' %}" class="site-btn site-btn--block">Back to sign in</a>
+{% endblock %}

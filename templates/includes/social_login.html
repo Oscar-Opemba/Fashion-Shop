@@ -1,0 +1,32 @@
+{# Provider buttons for the sign-in and sign-up cards.
+
+   `get_providers` only returns providers that actually have an app, and
+   settings.py only registers a provider whose keys are in the environment,
+   so with no keys set this include renders nothing at all.
+
+   The buttons POST rather than link: SOCIALACCOUNT_LOGIN_ON_GET is left at
+   its default of False, so a GET would land on an extra "continue" page. #}
+
+{% load socialaccount %}
+{% get_providers as socialaccount_providers %}
+
+{% if socialaccount_providers %}
+    <div class="social-login">
+        <div class="social-login__divider"><span>or</span></div>
+
+        {% for provider in socialaccount_providers %}
+            <form method="post" action="{% provider_login_url provider process='login' %}">
+                {% csrf_token %}
+                {% if redirect_field_value %}
+                    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                {% endif %}
+                <button type="submit"
+                        class="social-btn social-btn--{{ provider.id }}"
+                        aria-label="Continue with {{ provider.name }}">
+                    <i class="fa fa-{{ provider.id }}" aria-hidden="true"></i>
+                    <span>Continue with {{ provider.name }}</span>
+                </button>
+            </form>
+        {% endfor %}
+    </div>
+{% endif %}

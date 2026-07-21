@@ -10,100 +10,87 @@
 {% endblock %}
 
 {% block content %}
+<!-- Shop Section Begin -->
 <section class="shop spad">
     <div class="container">
-        {# On phones the filters collapse behind a button so the grid stays #}
-        {# above the fold. From lg up they render as the theme's sidebar.   #}
-        <div class="row d-lg-none">
-            <div class="col-12">
-                <button class="filter-toggle" type="button" data-toggle="collapse"
-                        data-target="#shopFilters" aria-expanded="false" aria-controls="shopFilters">
-                    <span class="icon_menu"></span> Filter &amp; sort
-                </button>
-            </div>
-        </div>
-
         <div class="row">
             <div class="col-lg-3">
-                <div class="shop__sidebar collapse d-lg-block" id="shopFilters">
+                <div class="shop__sidebar">
                     <div class="shop__sidebar__search">
                         <form action="{% url 'catalog:product_list' %}" method="get">
-                            <input type="search" name="q" value="{{ query }}"
-                                   placeholder="Search..." aria-label="Search products">
+                            <input type="text" name="q" value="{{ query }}" placeholder="Search...">
                             {% if active_category %}
                                 <input type="hidden" name="category" value="{{ active_category.slug }}">
                             {% endif %}
-                            <button type="submit" aria-label="Search"><span class="icon_search"></span></button>
+                            <button type="submit"><span class="icon_search"></span></button>
                         </form>
                     </div>
-
                     <div class="shop__sidebar__accordion">
-                        <div class="shop__sidebar__categories">
-                            <h5 class="sidebar__title">Categories</h5>
-                            <ul class="nice-scroll">
-                                <li{% if not active_category %} class="active"{% endif %}>
-                                    <a href="{% url 'catalog:product_list' %}">All products</a>
-                                </li>
-                                {% for category in categories %}
-                                    <li{% if active_category == category %} class="active"{% endif %}>
-                                        <a href="{{ category.get_absolute_url }}">
-                                            {{ category.name }} ({{ category.product_count }})
-                                        </a>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-
-                        <div class="shop__sidebar__price">
-                            <h5 class="sidebar__title">Price</h5>
-                            <form action="{% url 'catalog:product_list' %}" method="get" class="price-filter">
-                                {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
-                                {% if active_category %}
-                                    <input type="hidden" name="category" value="{{ active_category.slug }}">
-                                {% endif %}
-                                <div class="price-filter__row">
-                                    <input type="number" name="min_price" min="0" step="1"
-                                           value="{{ request.GET.min_price|default:'' }}"
-                                           inputmode="numeric" placeholder="Min" aria-label="Minimum price">
-                                    <span>&ndash;</span>
-                                    <input type="number" name="max_price" min="0" step="1"
-                                           value="{{ request.GET.max_price|default:'' }}"
-                                           inputmode="numeric" placeholder="Max" aria-label="Maximum price">
+                        <div class="accordion" id="accordionExample">
+                            <div class="card">
+                                <div class="card-heading">
+                                    <a data-toggle="collapse" data-target="#collapseOne">Categories</a>
                                 </div>
-                                <button type="submit" class="site-btn site-btn--block">Apply</button>
-                            </form>
+                                <div id="collapseOne" class="collapse show" data-parent="#accordionExample">
+                                    <div class="card-body">
+                                        <div class="shop__sidebar__categories">
+                                            <ul class="nice-scroll">
+                                                <li><a href="{% url 'catalog:product_list' %}">All products</a></li>
+                                                {% for category in categories %}
+                                                    <li><a href="{{ category.get_absolute_url }}">{{ category.name }} ({{ category.product_count }})</a></li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-heading">
+                                    <a data-toggle="collapse" data-target="#collapseTwo">Filter Price</a>
+                                </div>
+                                <div id="collapseTwo" class="collapse show" data-parent="#accordionExample">
+                                    <div class="card-body">
+                                        <div class="shop__sidebar__price">
+                                            <ul>
+                                                {% for band in price_bands %}
+                                                    <li><a href="?{{ band.query }}">{{ band.label }}</a></li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
             <div class="col-lg-9">
                 <div class="shop__product__option">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-lg-6 col-md-6 col-sm-6">
                             <div class="shop__product__option__left">
                                 <p>
                                     {% if page_obj.paginator.count %}
                                         Showing {{ page_obj.start_index }}&ndash;{{ page_obj.end_index }}
-                                        of {{ page_obj.paginator.count }}
+                                        of {{ page_obj.paginator.count }} results
                                     {% else %}
                                         No products found
                                     {% endif %}
                                 </p>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-6 col-md-6 col-sm-6">
                             <div class="shop__product__option__right">
+                                <p>Sort by Price:</p>
                                 <form action="{% url 'catalog:product_list' %}" method="get" id="sortForm">
                                     {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
                                     {% if active_category %}
                                         <input type="hidden" name="category" value="{{ active_category.slug }}">
                                     {% endif %}
-                                    <label for="sort" class="sr-only">Sort by</label>
-                                    <select name="sort" id="sort" onchange="this.form.submit()">
+                                    <select name="sort" onchange="this.form.submit()">
                                         <option value="" {% if not sort %}selected{% endif %}>Newest</option>
-                                        <option value="price" {% if sort == 'price' %}selected{% endif %}>Price: low to high</option>
-                                        <option value="-price" {% if sort == '-price' %}selected{% endif %}>Price: high to low</option>
+                                        <option value="price" {% if sort == 'price' %}selected{% endif %}>Low To High</option>
+                                        <option value="-price" {% if sort == '-price' %}selected{% endif %}>High To Low</option>
                                         <option value="name" {% if sort == 'name' %}selected{% endif %}>Name A&ndash;Z</option>
                                     </select>
                                 </form>
@@ -111,29 +98,24 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="row">
                     {% for product in products %}
-                        <div class="col-6 col-md-4">
+                        <div class="col-lg-4 col-md-6 col-sm-6">
                             {% include 'includes/product_card.html' %}
                         </div>
                     {% empty %}
-                        <div class="col-12">
-                            <p class="empty-state">
-                                Nothing matched{% if query %} &ldquo;{{ query }}&rdquo;{% endif %}.
-                                <a href="{% url 'catalog:product_list' %}">Clear filters</a>
-                            </p>
+                        <div class="col-lg-12">
+                            <p>Nothing matched{% if query %} &ldquo;{{ query }}&rdquo;{% endif %}.
+                                <a href="{% url 'catalog:product_list' %}">Clear filters</a></p>
                         </div>
                     {% endfor %}
                 </div>
-
                 {% if page_obj.paginator.num_pages > 1 %}
                     <div class="row">
                         <div class="col-lg-12">
                             <div class="product__pagination">
                                 {% if page_obj.has_previous %}
-                                    <a href="?{{ querystring }}&page={{ page_obj.previous_page_number }}"
-                                       aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+                                    <a href="?{{ querystring }}&page={{ page_obj.previous_page_number }}"><i class="fa fa-angle-left"></i></a>
                                 {% endif %}
                                 {% for num in page_obj.paginator.page_range %}
                                     {% if num == page_obj.number %}
@@ -143,8 +125,7 @@
                                     {% endif %}
                                 {% endfor %}
                                 {% if page_obj.has_next %}
-                                    <a href="?{{ querystring }}&page={{ page_obj.next_page_number }}"
-                                       aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+                                    <a href="?{{ querystring }}&page={{ page_obj.next_page_number }}"><i class="fa fa-angle-right"></i></a>
                                 {% endif %}
                             </div>
                         </div>
@@ -154,4 +135,5 @@
         </div>
     </div>
 </section>
+<!-- Shop Section End -->
 {% endblock %}

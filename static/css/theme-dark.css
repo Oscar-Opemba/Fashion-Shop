@@ -750,6 +750,63 @@ select option { background: var(--surface-2); color: var(--text); }
 .auth-card { padding-top: 20px; }
 .auth-card__alt { font-size: 14px; margin-top: 14px; text-align: center; }
 .auth-card__alt a { color: var(--accent-text); }
+.auth-card__lead { color: var(--muted); font-size: 15px; margin-bottom: 20px; }
+
+/* Social sign-in. The buttons are form submits, not links, so every visual
+   property the theme would have given an <a> is set here. Brand fills are the
+   providers' own; both carry white text at >= 4.5:1, so they are left as-is
+   rather than being shifted like --accent was. */
+
+.social-login { margin-top: 22px; }
+
+.social-login__divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    color: var(--muted);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.social-login__divider::before,
+.social-login__divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.social-login form { margin: 0 0 10px; }
+.social-login form:last-child { margin-bottom: 0; }
+
+.social-btn {
+    width: 100%;
+    min-height: var(--tap);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 16px;
+    cursor: pointer;
+    transition: filter .2s;
+}
+.social-btn:hover { filter: brightness(1.15); }
+.social-btn:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.social-btn i { font-size: 16px; }
+
+/* Google's own button spec is a light surface with near-black text, which also
+   keeps its button from competing with the theme's red. Facebook's stock
+   #1877f2 only reaches 4.23:1 behind white text, so it is darkened to #0e5fc0
+   (6.15:1); Google's light face measures 16.1:1. */
+.social-btn--google { background: #ffffff; color: #1f1f1f; border-color: #dadce0; }
+.social-btn--facebook { background: #0e5fc0; color: #ffffff; }
 
 .address-card {
     background: var(--surface);
@@ -833,7 +890,7 @@ select option { background: var(--surface-2); color: var(--text); }
     color: var(--text);
 }
 .alert-success { border-left-color: #4caf50; }
-.alert-error, .alert-danger { border-left-color: var(--accent-text); }
+.alert-danger { border-left-color: var(--accent-text); }
 .alert-warning { border-left-color: #e0b64a; }
 .alert-info { border-left-color: #7fb2ef; }
 .alert .close { color: var(--text); opacity: .7; text-shadow: none; }

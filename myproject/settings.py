@@ -7,6 +7,7 @@ project root (see .env.example). Never commit .env.
 
 from pathlib import Path
 
+from django.contrib.messages import constants as message_constants
 from dotenv import load_dotenv
 import os
 
@@ -52,9 +53,13 @@ INSTALLED_APPS = [
     # Third party
     'allauth',
     'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
     'crispy_forms',
     'crispy_bootstrap4',
     'django_ckeditor_5',
+    'embed_video',
 
     # Local
     'core',
@@ -164,6 +169,66 @@ ACCOUNT_LOGOUT_REDIRECT_URL = 'core:home'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
+# Social login (Google, Facebook)
+# Credentials are read from the environment rather than the admin's SocialApp
+# table, so a fresh clone needs no database fixture. A provider whose keys are
+# absent is not registered at all, and the sign-in page then omits its button —
+# that is what makes this safe to ship with the keys unset.
+
+SOCIALACCOUNT_PROVIDERS = {}
+
+if env('GOOGLE_CLIENT_ID') and env('GOOGLE_CLIENT_SECRET'):
+    SOCIALACCOUNT_PROVIDERS['google'] = {
+        'APP': {
+            'client_id': env('GOOGLE_CLIENT_ID'),
+            'secret': env('GOOGLE_CLIENT_SECRET'),
+            'key': '',
+        },
+        'SCOPE': ['profile', 'email'],
+        # No refresh token: the shop only needs the identity at sign-in time.
+        'AUTH_PARAMS': {'access_type': 'online'},
+    }
+
+if env('FACEBOOK_CLIENT_ID') and env('FACEBOOK_CLIENT_SECRET'):
+    SOCIALACCOUNT_PROVIDERS['facebook'] = {
+        'APP': {
+            'client_id': env('FACEBOOK_CLIENT_ID'),
+            'secret': env('FACEBOOK_CLIENT_SECRET'),
+            'key': '',
+        },
+        'METHOD': 'oauth2',
+        'SCOPE': ['email', 'public_profile'],
+        'FIELDS': ['id', 'first_name', 'last_name', 'name', 'email'],
+    }
+
+# The provider supplies the email, so there is nothing left to ask for and the
+# intermediate signup form is skipped.
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+
+# Someone who registered with a password and later clicks "Continue with
+# Google" should land in their existing account, not hit "an account already
+# exists with this email". allauth only links the two when the provider says
+# the address is verified — true for Google, not for Facebook, which is why
+# Facebook still routes such a collision through the normal error path.
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+
+# Access/refresh tokens are never used after login, so they are not persisted.
+SOCIALACCOUNT_STORE_TOKENS = False
+
+
+# Messages
+# includes/messages.html renders `alert-{{ message.tags }}`, so the tags have
+# to be Bootstrap contextual names. Only ERROR differs — Django calls it
+# 'error', Bootstrap calls it 'danger'.
+
+MESSAGE_TAGS = {
+    message_constants.DEBUG: 'secondary',
+    message_constants.ERROR: 'danger',
+}
+
+
 # Production hardening
 # Off in development because the dev server is plain http and these would
 # make it unusable; they switch on by themselves once DEBUG is False.
@@ -186,6 +251,18 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 
 # Rich text editor used for product descriptions
+# Two configs: 'default' is the minimal one, kept for short fields; 'extends'
+# is the full editor Product.description uses.
+
+CKEDITOR_5_COLOR_PALETTE = [
+    {'color': 'hsl(0, 0%, 0%)', 'label': 'Black'},
+    {'color': 'hsl(0, 0%, 40%)', 'label': 'Grey'},
+    {'color': 'hsl(0, 0%, 100%)', 'label': 'White'},
+    {'color': 'hsl(0, 75%, 55%)', 'label': 'Red'},
+    {'color': 'hsl(30, 90%, 50%)', 'label': 'Orange'},
+    {'color': 'hsl(120, 60%, 35%)', 'label': 'Green'},
+    {'color': 'hsl(210, 75%, 50%)', 'label': 'Blue'},
+]
 
 CKEDITOR_5_CONFIGS = {
     'default': {
@@ -194,8 +271,70 @@ CKEDITOR_5_CONFIGS = {
             'bulletedList', 'numberedList', 'blockQuote',
         ],
     },
+    'extends': {
+        'toolbar': [
+            'heading', '|', 'outdent', 'indent', '|',
+            'bold', 'italic', 'underline', 'strikethrough', 'highlight', '|',
+            'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+            'link', 'bulletedList', 'numberedList', 'todoList', '|',
+            'blockQuote', 'codeBlock', 'insertTable', 'imageUpload',
+            'mediaEmbed', '|',
+            'removeFormat', 'sourceEditing',
+        ],
+        'blockToolbar': [
+            'paragraph', 'heading1', 'heading2', 'heading3', '|',
+            'bulletedList', 'numberedList', '|', 'blockQuote',
+        ],
+        'heading': {
+            'options': [
+                {'model': 'paragraph', 'title': 'Paragraph',
+                 'class': 'ck-heading_paragraph'},
+                {'model': 'heading2', 'view': 'h2', 'title': 'Heading 2',
+                 'class': 'ck-heading_heading2'},
+                {'model': 'heading3', 'view': 'h3', 'title': 'Heading 3',
+                 'class': 'ck-heading_heading3'},
+            ],
+        },
+        'image': {
+            'toolbar': [
+                'imageTextAlternative', '|',
+                'imageStyle:alignLeft', 'imageStyle:alignCenter',
+                'imageStyle:alignRight',
+            ],
+            'styles': ['full', 'side', 'alignLeft', 'alignCenter', 'alignRight'],
+        },
+        'table': {
+            'contentToolbar': [
+                'tableColumn', 'tableRow', 'mergeTableCells',
+                'tableProperties', 'tableCellProperties',
+            ],
+            'tableProperties': {
+                'borderColors': CKEDITOR_5_COLOR_PALETTE,
+                'backgroundColors': CKEDITOR_5_COLOR_PALETTE,
+            },
+            'tableCellProperties': {
+                'borderColors': CKEDITOR_5_COLOR_PALETTE,
+                'backgroundColors': CKEDITOR_5_COLOR_PALETTE,
+            },
+        },
+        'list': {
+            'properties': {
+                'styles': True,
+                'startIndex': True,
+                'reversed': True,
+            },
+        },
+    },
 }
+
 CKEDITOR_5_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+# imageUpload posts to /ckeditor5/image_upload/. Restrict it to staff — the
+# view is reachable by any authenticated user otherwise — and to real image
+# types, since the uploads land under MEDIA_ROOT and are served back.
+CKEDITOR_5_FILE_UPLOAD_PERMISSION = 'staff'
+CKEDITOR_5_UPLOAD_FILE_TYPES = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+CKEDITOR_5_MAX_FILE_SIZE = 5  # MB
 
 
 # Shopping cart

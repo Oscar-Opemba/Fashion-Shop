@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Avg
 from django.urls import reverse
 from django.utils.text import slugify
 
@@ -33,7 +34,7 @@ class Product(models.Model):
     )
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
-    description = CKEditor5Field(blank=True, config_name='default')
+    description = CKEditor5Field(blank=True, config_name='extends')
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField(default=0)
     image = models.ImageField(upload_to='products/', blank=True)
@@ -61,6 +62,27 @@ class Product(models.Model):
     @property
     def in_stock(self):
         return self.stock > 0
+
+    @property
+    def average_rating(self):
+        """Mean review score, 0 when nothing has been reviewed yet.
+
+        List pages annotate `avg_rating` so a grid of cards costs one query;
+        anything that did not annotate falls back to aggregating.
+        """
+        annotated = getattr(self, 'avg_rating', None)
+        if annotated is not None:
+            return annotated
+        return self.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+
+    @property
+    def stars(self):
+        """Five booleans, one per star, True where the star is filled.
+
+        The card markup needs this because templates cannot do arithmetic.
+        """
+        filled = int(round(self.average_rating or 0))
+        return [index < filled for index in range(5)]
 
 
 class ProductImage(models.Model):

@@ -1,10 +1,18 @@
+{# Shown only when SOCIALACCOUNT_AUTO_SIGNUP cannot complete on its own —
+   in practice, when the provider returned no email address. #}
+
 {% extends 'account/base_entrance.html' %}
 
-{% block title %}Create an account{% endblock %}
-{% block auth_title %}Create an account{% endblock %}
+{% block title %}Finish signing up{% endblock %}
+{% block auth_title %}Finish signing up{% endblock %}
 
 {% block auth_content %}
-<form method="post" action="{% url 'account_signup' %}">
+<p class="auth-card__lead">
+    You are about to use your {{ account.get_provider.name }} account to sign in.
+    Please confirm the details below.
+</p>
+
+<form method="post" action="{% url 'socialaccount_signup' %}">
     {% csrf_token %}
     {% if form.non_field_errors %}
         <div class="alert alert-danger">{{ form.non_field_errors }}</div>
@@ -17,15 +25,7 @@
             {% for error in field.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
         </div>
     {% endfor %}
-    {% if redirect_field_value %}
-        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
-    {% endif %}
-    <button type="submit" class="site-btn site-btn--block">Create account</button>
+    {{ redirect_field }}
+    <button type="submit" class="site-btn site-btn--block">Sign up</button>
 </form>
-
-{% include 'includes/social_login.html' %}
-
-<p class="auth-card__alt">
-    Already have an account? <a href="{% url 'account_login' %}">Sign in</a>
-</p>
 {% endblock %}

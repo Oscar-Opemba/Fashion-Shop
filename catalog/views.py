@@ -11,9 +11,46 @@ from .models import Category, Product, WishlistItem
 
 PAGE_SIZE = 12
 
+# The theme's sidebar filters price with a list of range links rather than a
+# pair of inputs, so the bands are fixed. Values are KES.
+PRICE_BANDS = [
+    (None, 2000),
+    (2000, 5000),
+    (5000, 10000),
+    (10000, 20000),
+    (20000, None),
+]
+
+
+def price_band_links(request):
+    """Build the sidebar's price links, keeping any other active filters."""
+    links = []
+    for low, high in PRICE_BANDS:
+        params = request.GET.copy()
+        for key in ('page', 'min_price', 'max_price'):
+            params.pop(key, None)
+        if low is not None:
+            params['min_price'] = low
+        if high is not None:
+            params['max_price'] = high
+
+        if low is None:
+            label = f'Under KES {high:,}'
+        elif high is None:
+            label = f'KES {low:,}+'
+        else:
+            label = f'KES {low:,} - {high:,}'
+
+        links.append({'label': label, 'query': params.urlencode()})
+    return links
+
 
 def product_list(request):
-    products = Product.objects.filter(is_active=True).select_related('category')
+    products = (
+        Product.objects.filter(is_active=True)
+        .select_related('category')
+        .annotate(avg_rating=Avg('reviews__rating'))
+    )
 
     query = request.GET.get('q', '').strip()
     if query:
@@ -58,6 +95,7 @@ def product_list(request):
         'query': query,
         'sort': sort,
         'querystring': params.urlencode(),
+        'price_bands': price_band_links(request),
     })
 
 

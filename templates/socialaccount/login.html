@@ -1,0 +1,29 @@
+{# allauth's confirmation step. The buttons in includes/social_login.html POST
+   straight to the provider, so this is only reached when a provider login url
+   is opened with a GET — a bookmark, or a "connect account" link. #}
+
+{% extends 'account/base_entrance.html' %}
+
+{% block title %}Continue with {{ provider.name }}{% endblock %}
+{% block auth_title %}
+    {% if process == 'connect' %}Connect {{ provider.name }}{% else %}Continue with {{ provider.name }}{% endif %}
+{% endblock %}
+
+{% block auth_content %}
+<p class="auth-card__lead">
+    {% if process == 'connect' %}
+        You are about to connect a {{ provider.name }} account to your profile.
+    {% else %}
+        You are about to sign in using your {{ provider.name }} account.
+    {% endif %}
+</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="site-btn site-btn--block">Continue</button>
+</form>
+
+<p class="auth-card__alt">
+    <a href="{% url 'account_login' %}">Back to sign in</a>
+</p>
+{% endblock %}

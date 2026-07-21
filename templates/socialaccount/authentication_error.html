@@ -1,0 +1,13 @@
+{% extends 'account/base_entrance.html' %}
+
+{% block title %}Sign-in failed{% endblock %}
+{% block auth_title %}Sign-in failed{% endblock %}
+
+{% block auth_content %}
+<p class="auth-card__lead">
+    Something went wrong while signing you in through that account. This is
+    usually temporary — please try again.
+</p>
+
+<a href="{% url 'account_login' %}" class="site-btn site-btn--block">Back to sign in</a>
+{% endblock %}

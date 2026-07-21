@@ -4,66 +4,123 @@
 {% block title %}Shop online, pay with M-Pesa{% endblock %}
 
 {% block content %}
-<section class="hero hero-normal">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="hero__text hero__text--home">
-                    <span>Shop online</span>
-                    <h2>Everything you need,<br>paid for with M-Pesa</h2>
-                    <p>Browse the catalogue, add to your cart and pay straight from your phone.</p>
-                    <a href="{% url 'catalog:product_list' %}" class="primary-btn">Start shopping</a>
+<!-- Hero Section Begin -->
+<section class="hero">
+    <div class="hero__slider owl-carousel">
+        <div class="hero__items set-bg" data-setbg="{% static 'img/hero/hero-1.jpg' %}">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xl-5 col-lg-7 col-md-8">
+                        <div class="hero__text">
+                            <h6>Shop online</h6>
+                            <h2>Everything you need, paid for with M-Pesa</h2>
+                            <p>Browse the catalogue, add to your cart and pay straight from
+                                your phone.</p>
+                            <a href="{% url 'catalog:product_list' %}" class="primary-btn">Shop now
+                                <span class="arrow_right"></span></a>
+                            <div class="hero__social">
+                                <a href="#"><i class="fa fa-facebook"></i></a>
+                                <a href="#"><i class="fa fa-twitter"></i></a>
+                                <a href="#"><i class="fa fa-pinterest"></i></a>
+                                <a href="#"><i class="fa fa-instagram"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="hero__items set-bg" data-setbg="{% static 'img/hero/hero-2.jpg' %}">
+            <div class="container">
+                <div class="row">
+                    <div class="col-xl-5 col-lg-7 col-md-8">
+                        <div class="hero__text">
+                            <h6>Delivery countrywide</h6>
+                            <h2>Pay on your phone, we bring it to you</h2>
+                            <p>Enter your M-Pesa number at checkout and approve the prompt.
+                                No card needed.</p>
+                            <a href="{% url 'catalog:product_list' %}" class="primary-btn">Shop now
+                                <span class="arrow_right"></span></a>
+                            <div class="hero__social">
+                                <a href="#"><i class="fa fa-facebook"></i></a>
+                                <a href="#"><i class="fa fa-twitter"></i></a>
+                                <a href="#"><i class="fa fa-pinterest"></i></a>
+                                <a href="#"><i class="fa fa-instagram"></i></a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+<!-- Hero Section End -->
 
 {% if categories %}
-<section class="categories">
+<!-- Banner Section Begin -->
+<section class="banner spad">
     <div class="container">
         <div class="row">
-            {% for category in categories %}
-                <div class="col-lg-4 col-md-6 col-sm-6">
-                    <div class="categories__item set-bg"
-                         data-setbg="{% if category.image %}{{ category.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}">
-                        <h5><a href="{{ category.get_absolute_url }}">{{ category.name }}</a></h5>
+            {% for category in categories|slice:":3" %}
+                {% if forloop.counter == 1 %}
+                    <div class="col-lg-7 offset-lg-4">
+                        <div class="banner__item">
+                {% elif forloop.counter == 2 %}
+                    <div class="col-lg-5">
+                        <div class="banner__item banner__item--middle">
+                {% else %}
+                    <div class="col-lg-7">
+                        <div class="banner__item banner__item--last">
+                {% endif %}
+                        <div class="banner__item__pic">
+                            <img src="{% if category.image %}{{ category.image.url }}{% else %}{% static 'img/banner/banner-1.jpg' %}{% endif %}"
+                                 alt="{{ category.name }}">
+                        </div>
+                        <div class="banner__item__text">
+                            <h2>{{ category.name }}</h2>
+                            <a href="{{ category.get_absolute_url }}">Shop now</a>
+                        </div>
                     </div>
                 </div>
             {% endfor %}
         </div>
     </div>
 </section>
+<!-- Banner Section End -->
 {% endif %}
 
+<!-- Product Section Begin -->
 <section class="product spad">
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
-                <div class="section-title">
-                    <h4>New arrivals</h4>
-                </div>
+                <ul class="filter__controls">
+                    <li class="active" data-filter="*">New arrivals</li>
+                    {% for category in categories %}
+                        <li data-filter=".cat-{{ category.slug }}">{{ category.name }}</li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
-        <div class="row">
+        <div class="row product__filter">
             {% for product in featured_products %}
-                <div class="col-6 col-md-4 col-lg-3">
+                <div class="col-lg-3 col-md-6 col-sm-6 mix cat-{{ product.category.slug }}">
                     {% include 'includes/product_card.html' %}
                 </div>
             {% empty %}
-                <div class="col-12">
-                    <p class="empty-state">No products yet. Run
-                        <code>python manage.py seed</code> to load sample data.</p>
+                <div class="col-lg-12">
+                    <p>No products yet. Run <code>python manage.py seed</code> to load
+                        sample data.</p>
                 </div>
             {% endfor %}
         </div>
         {% if featured_products %}
             <div class="row">
-                <div class="col-12 text-center">
+                <div class="col-lg-12 text-center">
                     <a href="{% url 'catalog:product_list' %}" class="primary-btn">View all products</a>
                 </div>
             </div>
         {% endif %}
     </div>
 </section>
+<!-- Product Section End -->
 {% endblock %}

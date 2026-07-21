@@ -1,0 +1,69 @@
+/* =========================================================================
+   Storefront additions to the MaleFashion theme.
+
+   The theme's own files are never edited, so this is loaded after style.css.
+   Everything here bridges a gap between the template's static markup and a
+   real Django shop — mostly places where the theme uses a link but we need a
+   form POST (add to cart, wishlist), or pages the template never shipped.
+
+   It is deliberately NOT a restyle: colours and metrics are taken from the
+   theme so the storefront still looks like the template.
+   ========================================================================= */
+
+/* ---------- Product card ---------- */
+/* The theme fades the title out on hover and fades an "Add To Cart" anchor in
+   over the top of it. Adding to a cart is a POST, so ours is a button inside a
+   form and has to be given that anchor's treatment by hand. */
+
+.product__item__text form {
+    margin: 0;
+}
+
+.product__item__text .add-cart {
+    font-size: 15px;
+    color: #e53637;
+    font-weight: 700;
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    visibility: hidden;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    -webkit-transition: all, 0.3s;
+    -o-transition: all, 0.3s;
+    transition: all, 0.3s;
+}
+
+.product__item:hover .product__item__text .add-cart {
+    top: 22px;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Sold-out items keep the label but must not look clickable. */
+.product__item__text span.add-cart {
+    color: #b7b7b7;
+    cursor: default;
+}
+
+/* The theme only ever shows empty stars on a card (it colours them in on its
+   "sale" items). Ours are real review scores, so a filled star gets the same
+   amber the theme uses for that state. */
+.product__item__text .rating i.is-filled {
+    color: #f7941d;
+}
+
+/* The wishlist toggle is a form button where the theme has a plain icon link. */
+.product__hover li form {
+    margin: 0;
+}
+
+.product__hover li button {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
