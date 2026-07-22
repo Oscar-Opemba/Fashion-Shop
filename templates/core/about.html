@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}About us{% endblock %}
 
@@ -7,28 +8,199 @@
 {% endblock %}
 
 {% block content %}
+<!-- About Section Begin -->
 <section class="about spad">
     <div class="container">
         <div class="row">
-            <div class="col-lg-8">
-                <div class="about__text">
-                    <h4>Who we are</h4>
+            <div class="col-lg-12">
+                <div class="about__pic">
+                    <img src="{% static 'img/about/about-us.jpg' %}" alt="Our store">
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-4 col-md-4 col-sm-6">
+                <div class="about__item">
+                    <h4>Who We Are</h4>
                     <p>We are an online store built for shopping from a phone. Browse the
-                        catalogue, add what you want to your cart, and pay with M-Pesa
-                        without leaving the page.</p>
-
-                    <h4>How payment works</h4>
-                    <p>At checkout you enter the M-Pesa number you want to pay from. We send
-                        a payment request to that number, you enter your PIN on your handset,
-                        and the order is confirmed as soon as Safaricom tells us the payment
-                        went through. Nothing is charged until you enter your PIN.</p>
-
-                    <h4>Delivery</h4>
-                    <p>We deliver countrywide. Add your delivery details at checkout and we
-                        will be in touch once your order is on its way.</p>
+                        catalogue, add what you want to your cart, and check out without
+                        ever leaving the page.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-4 col-sm-6">
+                <div class="about__item">
+                    <h4>How Ordering Works</h4>
+                    <p>Add what you want to your cart, leave your name, phone number and
+                        delivery address at checkout, and the order is placed. We call to
+                        confirm before it leaves the store.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-4 col-sm-6">
+                <div class="about__item">
+                    <h4>Why Choose Us</h4>
+                    <p>Countrywide delivery, honest stock counts, and a 7-day return
+                        window on anything that is not right.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
+<!-- About Section End -->
+
+<!-- Testimonial Section Begin -->
+<section class="testimonial">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-6 p-0">
+                <div class="testimonial__text">
+                    <span class="icon_quotations"></span>
+                    <p>“I ordered on my way home and the parcel arrived the next morning.
+                        No queue, no fuss, and it was exactly what the photos showed.”</p>
+                    <div class="testimonial__author">
+                        <div class="testimonial__author__pic">
+                            <img src="{% static 'img/about/testimonial-author.jpg' %}" alt="">
+                        </div>
+                        <div class="testimonial__author__text">
+                            <h5>Augusta Schultz</h5>
+                            <p>Fashion Design</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 p-0">
+                <div class="testimonial__pic set-bg" data-setbg="{% static 'img/about/testimonial-pic.jpg' %}"></div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Testimonial Section End -->
+
+<!-- Counter Section Begin -->
+<section class="counter spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="counter__item">
+                    <div class="counter__item__number">
+                        <h2 class="cn_num">102</h2>
+                    </div>
+                    <span>Our <br />Clients</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="counter__item">
+                    <div class="counter__item__number">
+                        <h2 class="cn_num">30</h2>
+                    </div>
+                    <span>Total <br />Categories</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="counter__item">
+                    <div class="counter__item__number">
+                        <h2 class="cn_num">47</h2>
+                    </div>
+                    <span>Counties <br />Served</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="counter__item">
+                    <div class="counter__item__number">
+                        <h2 class="cn_num">98</h2>
+                        <strong>%</strong>
+                    </div>
+                    <span>Happy <br />Customers</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Counter Section End -->
+
+<!-- Team Section Begin -->
+<section class="team spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="section-title">
+                    <span>Our Team</span>
+                    <h2>Meet Our Team</h2>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="team__item">
+                    <img src="{% static 'img/about/team-1.jpg' %}" alt="">
+                    <h4>John Smith</h4>
+                    <span>Fashion Design</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="team__item">
+                    <img src="{% static 'img/about/team-2.jpg' %}" alt="">
+                    <h4>Christine Wise</h4>
+                    <span>C.E.O</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="team__item">
+                    <img src="{% static 'img/about/team-3.jpg' %}" alt="">
+                    <h4>Sean Robbins</h4>
+                    <span>Manager</span>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 col-sm-6">
+                <div class="team__item">
+                    <img src="{% static 'img/about/team-4.jpg' %}" alt="">
+                    <h4>Lucy Myers</h4>
+                    <span>Delivery</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Team Section End -->
+
+<!-- Client Section Begin -->
+<section class="clients spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="section-title">
+                    <span>Partner</span>
+                    <h2>Happy Clients</h2>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            {# Logos are decorative, so they are spans rather than dead links. #}
+            <div class="col-lg-3 col-md-4 col-sm-4 col-6">
+                <span class="client__item"><img src="{% static 'img/clients/client-1.png' %}" alt=""></span>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-4 col-6">
+                <span class="client__item"><img src="{% static 'img/clients/client-2.png' %}" alt=""></span>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-4 col-6">
+                <span class="client__item"><img src="{% static 'img/clients/client-3.png' %}" alt=""></span>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-4 col-6">
+                <span class="client__item"><img src="{% static 'img/clients/client-4.png' %}" alt=""></span>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-4 col-6">
+                <span class="client__item"><img src="{% static 'img/clients/client-5.png' %}" alt=""></span>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-4 col-6">
+                <span class="client__item"><img src="{% static 'img/clients/client-6.png' %}" alt=""></span>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-4 col-6">
+                <span class="client__item"><img src="{% static 'img/clients/client-7.png' %}" alt=""></span>
+            </div>
+            <div class="col-lg-3 col-md-4 col-sm-4 col-6">
+                <span class="client__item"><img src="{% static 'img/clients/client-8.png' %}" alt=""></span>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Client Section End -->
 {% endblock %}
