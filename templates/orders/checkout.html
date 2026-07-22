@@ -10,6 +10,22 @@
 <section class="checkout spad">
     <div class="container">
         <div class="checkout__form">
+            {# The coupon form sits above the order form rather than inside it: #}
+            {# forms cannot nest, and it posts to its own endpoint.             #}
+            {% if not coupon %}
+                <h6 class="coupon__code">
+                    <span class="icon_tag_alt"></span> Have a coupon? Enter your code below.
+                </h6>
+                <form action="{% url 'orders:coupon_apply' %}" method="post" class="coupon-form">
+                    {% csrf_token %}
+                    <label for="id_code" class="sr-only">Coupon code</label>
+                    <div class="coupon-form__row">
+                        {{ coupon_form.code }}
+                        <button type="submit" class="site-btn">Apply</button>
+                    </div>
+                </form>
+            {% endif %}
+
             <h4>Delivery details</h4>
             <form action="{% url 'orders:checkout' %}" method="post" id="checkoutForm">
                 {% csrf_token %}
@@ -65,35 +81,17 @@
                                 <li class="grand-total">Total <span>KES {{ total|floatformat:2 }}</span></li>
                             </ul>
 
-                            <p class="checkout__pay-note">
-                                You will get an M-Pesa prompt on the number above.
-                                Enter your PIN to complete the order.
+                            <p class="checkout__order__note">
+                                We will call the number above to confirm your order
+                                before it is dispatched.
                             </p>
 
-                            <button type="submit" class="site-btn site-btn--block">Pay with M-Pesa</button>
+                            <button type="submit" class="site-btn site-btn--block">Place order</button>
                         </div>
                     </div>
                 </div>
             </form>
-
-            {% if not coupon %}
-                <form action="{% url 'orders:coupon_apply' %}" method="post" class="coupon-form">
-                    {% csrf_token %}
-                    <label for="id_code">Have a coupon?</label>
-                    <div class="coupon-form__row">
-                        {{ coupon_form.code }}
-                        <button type="submit" class="site-btn">Apply</button>
-                    </div>
-                </form>
-            {% endif %}
         </div>
     </div>
 </section>
-{% endblock %}
-
-{% block sticky_bar %}
-<div class="sticky-bar d-lg-none">
-    <span class="sticky-bar__price">KES {{ total|floatformat:2 }}</span>
-    <button type="submit" form="checkoutForm" class="primary-btn">Pay with M-Pesa</button>
-</div>
 {% endblock %}

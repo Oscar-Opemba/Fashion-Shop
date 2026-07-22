@@ -1,7 +1,13 @@
+import re
+
 from django import forms
 from django.utils import timezone
 
 from .models import Coupon, Order
+
+# Accepts the shapes a Kenyan number is typed in — 07XX…, 01XX…, +2547XX…,
+# 2547XX… — and stores the local 0-prefixed form.
+PHONE_RE = re.compile(r'^(?:\+?254|0)?(7\d{8}|1\d{8})$')
 
 
 class OrderCreateForm(forms.ModelForm):
@@ -48,14 +54,13 @@ class OrderCreateForm(forms.ModelForm):
                 field.widget.attrs.setdefault('aria-label', field.label)
 
     def clean_phone(self):
-        from payments.daraja import normalise_phone
-
-        phone = normalise_phone(self.cleaned_data['phone'])
-        if phone is None:
+        raw = re.sub(r'[\s\-()]', '', self.cleaned_data['phone'])
+        match = PHONE_RE.match(raw)
+        if not match:
             raise forms.ValidationError(
-                'Enter a valid Safaricom number, e.g. 0712345678.'
+                'Enter a valid phone number, e.g. 0712345678.'
             )
-        return phone
+        return f'0{match.group(1)}'
 
 
 class CouponApplyForm(forms.Form):

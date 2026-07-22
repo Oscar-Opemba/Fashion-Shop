@@ -28,8 +28,8 @@ class Coupon(models.Model):
 
 class Order(models.Model):
     class Status(models.TextChoices):
-        PENDING = 'pending', 'Pending payment'
-        PAID = 'paid', 'Paid'
+        PENDING = 'pending', 'Pending'
+        PROCESSING = 'processing', 'Processing'
         SHIPPED = 'shipped', 'Shipped'
         DELIVERED = 'delivered', 'Delivered'
         CANCELLED = 'cancelled', 'Cancelled'
@@ -41,7 +41,7 @@ class Order(models.Model):
     )
 
     full_name = models.CharField(max_length=150)
-    phone = models.CharField(max_length=20, help_text='M-Pesa number, e.g. 0712345678')
+    phone = models.CharField(max_length=20, help_text='e.g. 0712345678')
     email = models.EmailField(blank=True)
 
     county = models.CharField(max_length=100)
@@ -57,9 +57,6 @@ class Order(models.Model):
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
-    paid = models.BooleanField(default=False)
-    # Set when stock is decremented, so a replayed callback cannot do it twice.
-    stock_applied = models.BooleanField(default=False)
 
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
@@ -83,11 +80,6 @@ class Order(models.Model):
 
     def get_total(self):
         return self.get_subtotal() - self.get_discount()
-
-    def get_mpesa_amount(self):
-        """Daraja rejects decimals, so the charge is rounded up to whole shillings."""
-        total = self.get_total()
-        return max(1, int(total.to_integral_value(rounding='ROUND_CEILING')))
 
 
 class OrderItem(models.Model):

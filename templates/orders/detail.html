@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Order #{{ order.pk }}{% endblock %}
 
@@ -13,20 +14,36 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-8">
-                <div class="cart-lines">
-                    {% for item in order.items.all %}
-                        <div class="cart-line">
-                            <div class="cart-line__body">
-                                <h6><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></h6>
-                                <span class="cart-line__unit">
-                                    KES {{ item.price|floatformat:2 }} &times; {{ item.quantity }}
-                                </span>
-                            </div>
-                            <div class="cart-line__end">
-                                <span class="cart-line__total">KES {{ item.get_cost|floatformat:2 }}</span>
-                            </div>
-                        </div>
-                    {% endfor %}
+                <div class="shopping__cart__table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                                <tr>
+                                    <td class="product__cart__item">
+                                        <div class="product__cart__item__pic">
+                                            <a href="{{ item.product.get_absolute_url }}">
+                                                <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}"
+                                                     alt="{{ item.product.name }}" loading="lazy">
+                                            </a>
+                                        </div>
+                                        <div class="product__cart__item__text">
+                                            <h6><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></h6>
+                                            <h5>KES {{ item.price|floatformat:2 }}</h5>
+                                        </div>
+                                    </td>
+                                    <td class="quantity__item">{{ item.quantity }}</td>
+                                    <td class="cart__price">KES {{ item.get_cost|floatformat:2 }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -43,9 +60,6 @@
                                 <span>&minus;KES {{ order.get_discount|floatformat:2 }}</span></li>
                         {% endif %}
                         <li class="grand-total">Total <span>KES {{ order.get_total|floatformat:2 }}</span></li>
-                        {% if order.payment.mpesa_receipt %}
-                            <li>M-Pesa receipt <span>{{ order.payment.mpesa_receipt }}</span></li>
-                        {% endif %}
                     </ul>
 
                     <h6 class="mt-4">Delivery</h6>
@@ -55,13 +69,6 @@
                         <li>{{ order.town }}, {{ order.county }}</li>
                         <li>{{ order.phone }}</li>
                     </ul>
-
-                    {% if not order.paid %}
-                        <form action="{% url 'payments:retry' order.pk %}" method="post">
-                            {% csrf_token %}
-                            <button type="submit" class="primary-btn">Complete payment</button>
-                        </form>
-                    {% endif %}
                 </div>
             </div>
         </div>

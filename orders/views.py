@@ -3,9 +3,11 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from cart.cart import Cart
+from catalog.models import Product
 
 from .forms import CouponApplyForm, OrderCreateForm
 from .models import Order, OrderItem
@@ -57,19 +59,27 @@ def checkout(request):
                     for item in cart
                 ])
 
+                # The order is the commitment, so the stock goes with it.
+                for item in cart:
+                    product = Product.objects.select_for_update().get(
+                        pk=item['product'].pk
+                    )
+                    product.stock = max(0, product.stock - item['quantity'])
+                    product.save(update_fields=['stock'])
+
             if not order.user_id:
                 # A guest's claim on an order is recorded here, at the only
-                # moment we know it is genuinely theirs. Doing it later (when
-                # payment starts) would let anyone claim an order by walking
-                # ids and then read the buyer's name, phone and address.
+                # moment we know it is genuinely theirs. Recording it later
+                # would let anyone claim an order by walking ids and then read
+                # the buyer's name, phone and address.
                 owned = request.session.get('guest_orders', [])
                 owned.append(order.pk)
                 request.session['guest_orders'] = owned[-20:]
 
-            # Stock is deliberately NOT decremented here. It is decremented
-            # when payment is confirmed, so an abandoned STK prompt does not
-            # hold inventory hostage.
-            return redirect('payments:start', order_id=order.pk)
+            cart.clear()
+            request.session.pop(COUPON_SESSION_ID, None)
+
+            return redirect('orders:placed', order_id=order.pk)
     else:
         form = OrderCreateForm(initial=_prefill(request))
 
@@ -89,6 +99,30 @@ def checkout(request):
         'discount': discount,
         'total': subtotal - discount,
     })
+
+
+def order_placed(request, order_id):
+    """Confirmation page, reachable by the guest who placed the order too."""
+    order = get_object_or_404(
+        Order.objects.prefetch_related('items__product'), pk=order_id
+    )
+
+    if not _owns_order(request, order):
+        raise Http404
+
+    return render(request, 'orders/placed.html', {'order': order})
+
+
+def _owns_order(request, order):
+    """A member's order is tied to the user, a guest's to their session.
+
+    Guest claims are written by the checkout view when the order is created,
+    never here — otherwise walking order ids would hand out other people's
+    delivery details.
+    """
+    if order.user_id:
+        return request.user.is_authenticated and order.user_id == request.user.id
+    return order.pk in request.session.get('guest_orders', [])
 
 
 def _prefill(request):

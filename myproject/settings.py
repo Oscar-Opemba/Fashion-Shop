@@ -34,8 +34,8 @@ DEBUG = env_bool('DEBUG', True)
 
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
 
-# ngrok and other tunnels serve the site over https on a foreign host, so the
-# origin has to be trusted explicitly or every POST fails CSRF checks.
+# A tunnel or proxy serving the site over https on a foreign host has to be
+# trusted explicitly or every POST fails CSRF checks.
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 
 
@@ -66,7 +66,6 @@ INSTALLED_APPS = [
     'catalog',
     'cart',
     'orders',
-    'payments',
     'accounts',
 ]
 
@@ -340,20 +339,3 @@ CKEDITOR_5_MAX_FILE_SIZE = 5  # MB
 # Shopping cart
 
 CART_SESSION_ID = 'cart'
-
-
-# M-Pesa Daraja (Lipa na M-Pesa Online / STK Push)
-
-MPESA_ENV = env('MPESA_ENV', 'sandbox')
-MPESA_CONSUMER_KEY = env('MPESA_CONSUMER_KEY', '')
-MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET', '')
-MPESA_SHORTCODE = env('MPESA_SHORTCODE', '174379')
-MPESA_PASSKEY = env('MPESA_PASSKEY', '')
-
-# Public https base url Safaricom can reach (ngrok during development).
-MPESA_CALLBACK_BASE_URL = env('MPESA_CALLBACK_BASE_URL', '')
-
-# The callback is unauthenticated, so its path carries an unguessable segment.
-MPESA_CALLBACK_TOKEN = env('MPESA_CALLBACK_TOKEN', 'change-me')
-
-MPESA_TRANSACTION_DESC = env('MPESA_TRANSACTION_DESC', 'Online purchase')

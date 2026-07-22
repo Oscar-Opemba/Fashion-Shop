@@ -24,12 +24,6 @@
                             <span>{{ order.items.count }} item{{ order.items.count|pluralize }}</span>
                             <strong>KES {{ order.get_total|floatformat:2 }}</strong>
                         </div>
-                        {% if not order.paid %}
-                            <form action="{% url 'payments:retry' order.pk %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit" class="site-btn site-btn--sm">Complete payment</button>
-                            </form>
-                        {% endif %}
                     </div>
                 {% empty %}
                     <p class="empty-state">
