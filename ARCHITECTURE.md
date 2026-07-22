@@ -1,11 +1,12 @@
 # Architecture
 
-A mobile-first Django storefront with M-Pesa STK Push payments, built on the
-Ashion HTML theme. Django 6.0.7, SQLite, session-based cart, guest checkout.
+A Django storefront built on the MaleFashion HTML theme. Django 6.0.7, SQLite,
+session-based cart, guest checkout, no online payment — an order is placed and
+settled with the customer off-site.
 
-- **~2,540 lines** of Python (excluding migrations and the virtualenv)
-- **1,524 lines** across 28 templates
-- **6 apps**, 11 models, 106 static files, 25 uploaded media files
+- **~2,000 lines** of Python (excluding migrations and the virtualenv)
+- **2,020 lines** across 31 templates
+- **5 apps**, 10 models, 105 static files, 25 uploaded media files
 
 ---
 
@@ -26,8 +27,8 @@ Fashion-Shop/
 │
 ├── myproject/                              ── PROJECT CONFIG ──
 │   ├── __init__.py
-│   ├── settings.py                   232   env-driven config (see §3)
-│   ├── urls.py                        24   root URL routing
+│   ├── settings.py                   341   env-driven config (see §3)
+│   ├── urls.py                        23   root URL routing
 │   ├── wsgi.py                        16   sync deployment entrypoint
 │   └── asgi.py                        16   async deployment entrypoint
 │
@@ -73,30 +74,16 @@ Fashion-Shop/
 ├── orders/                                 ── CHECKOUT & ORDERS ──
 │   ├── __init__.py
 │   ├── apps.py
-│   ├── models.py                     105   Coupon, Order, OrderItem
-│   ├── views.py                      169   checkout, coupon apply/remove,
-│   │                                       order_history, order_detail
-│   ├── forms.py                       78   OrderCreateForm, CouponApplyForm
-│   ├── admin.py                       56   Order + Coupon admin
-│   ├── urls.py                        13   app_name='orders'
+│   ├── models.py                      97   Coupon, Order, OrderItem
+│   ├── views.py                      203   checkout, order_placed, coupon
+│   │                                       apply/remove, history, detail
+│   ├── forms.py                       83   OrderCreateForm, CouponApplyForm
+│   ├── admin.py                       32   Order + Coupon admin
+│   ├── urls.py                        14   app_name='orders'
 │   └── migrations/
 │       ├── __init__.py
-│       └── 0001_initial.py
-│
-├── payments/                               ── M-PESA DARAJA ── (most involved)
-│   ├── __init__.py
-│   ├── apps.py
-│   ├── daraja.py                     212   Safaricom API client — NO Django
-│   │                                       imports, pure integration layer
-│   ├── models.py                      44   MpesaPayment
-│   ├── views.py                      264   start → waiting → status → success/
-│   │                                       failed/retry, + callback webhook
-│   ├── admin.py                       22
-│   ├── urls.py                        18   app_name='payments'
-│   ├── tests.py                      184   ✅ HAS TESTS (best-covered app)
-│   └── migrations/
-│       ├── __init__.py
-│       └── 0001_initial.py
+│       ├── 0001_initial.py
+│       └── 0002_remove_order_paid_...py    dropped the payment fields
 │
 ├── accounts/                               ── USER PROFILES ──
 │   ├── __init__.py
@@ -137,14 +124,10 @@ Fashion-Shop/
 │   │   └── _summary.html               9   fragment — underscore = not a page
 │   │
 │   ├── orders/
-│   │   ├── checkout.html              99
-│   │   ├── detail.html                70
-│   │   └── history.html               44
-│   │
-│   ├── payments/
-│   │   ├── waiting.html               84   polls the status endpoint via JS
-│   │   ├── success.html               37
-│   │   └── failed.html                38
+│   │   ├── checkout.html              97
+│   │   ├── placed.html                38   order confirmation
+│   │   ├── detail.html                77
+│   │   └── history.html               38
 │   │
 │   ├── accounts/                           YOUR views
 │   │   ├── profile.html               61
@@ -157,11 +140,10 @@ Fashion-Shop/
 │       └── signup.html                29
 │
 ├── static/                                 ── 106 FILES — Ashion theme ──
-│   ├── css/                           11   bootstrap.min, style, owl.carousel,
+│   ├── css/                           10   bootstrap.min, style, owl.carousel,
 │   │                                       magnific-popup, nice-select, slicknav,
 │   │                                       font-awesome, elegant-icons,
-│   │                                       ⚠️ theme-dark.css (MODIFIED),
-│   │                                       ⚠️ storefront.css (UNTRACKED)
+│   │                                       storefront.css (the only additions)
 │   ├── js/                            11   jquery-3.3.1, bootstrap, owl.carousel,
 │   │                                       mixitup, magnific-popup, nicescroll,
 │   │                                       countdown, slicknav, nice-select,
@@ -196,7 +178,7 @@ at deploy time, gitignored.
 
 ## 2. Data model
 
-11 models across 4 apps. `core` and `cart` deliberately own none.
+10 models across 3 apps. `core` and `cart` deliberately own none.
 
 ### catalog (`catalog/models.py`, 140 LOC)
 
@@ -208,19 +190,13 @@ at deploy time, gitignored.
 | `Review` | `product` FK, `user` FK, `rating` (choices), `comment` | UniqueConstraint(user, product); **0 rows** |
 | `WishlistItem` | `user` FK, `product` FK, `added` | UniqueConstraint(user, product); **0 rows** |
 
-### orders (`orders/models.py`, 105 LOC)
+### orders (`orders/models.py`, 97 LOC)
 
 | Model | Key fields | Notes |
 |---|---|---|
 | `Coupon` | `code` (unique), `discount_percent`, `valid_from`/`valid_to`, `active` | `is_valid()` checks the window |
-| `Order` | `user` FK **nullable** → guest checkout; `full_name`, `phone`, `email`, `county`, `town`, `street`, `notes`; `coupon` FK; `discount_percent`; `status` (choices); `paid`; `stock_applied` | money methods: `get_subtotal()`, `get_discount()`, `get_total()`, `get_mpesa_amount()` |
+| `Order` | `user` FK **nullable** → guest checkout; `full_name`, `phone`, `email`, `county`, `town`, `street`, `notes`; `coupon` FK; `discount_percent`; `status` (choices) | money methods: `get_subtotal()`, `get_discount()`, `get_total()` |
 | `OrderItem` | `order` FK CASCADE, `product` FK **PROTECT**, `price`, `quantity` | `price` is a **snapshot** — later price changes don't rewrite history |
-
-### payments (`payments/models.py`, 44 LOC)
-
-| Model | Key fields | Notes |
-|---|---|---|
-| `MpesaPayment` | `order` **OneToOne**, `phone`, `amount` (int), `merchant_request_id`, `checkout_request_id` (unique), `mpesa_receipt`, `result_code`/`result_desc`, `status`, `raw_callback` JSON | `amount` is `PositiveIntegerField` — Daraja transacts whole shillings |
 
 ### accounts (`accounts/models.py`, 48 LOC)
 
@@ -239,14 +215,14 @@ at deploy time, gitignored.
 
 ---
 
-## 3. Configuration (`myproject/settings.py`, 232 LOC)
+## 3. Configuration (`myproject/settings.py`, 341 LOC)
 
 Read top to bottom, the file is organised in blocks:
 
 | Lines | Block | Contents |
 |---|---|---|
 | 8–28 | env loading | `python-dotenv` + three helpers: `env()`, `env_bool()`, `env_list()` |
-| 31–39 | secrets/hosts | `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` (needed for ngrok) |
+| 31–39 | secrets/hosts | `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` |
 | 44–67 | `INSTALLED_APPS` | django · third-party · local, in that order |
 | 69–80 | middleware | + `allauth.account.middleware.AccountMiddleware` |
 | 82–99 | templates | `DIRS=[BASE_DIR/'templates']`, `APP_DIRS=True`, 2 custom context processors |
@@ -258,8 +234,7 @@ Read top to bottom, the file is organised in blocks:
 | 183–192 | prod hardening | inside `if not DEBUG:` — self-activating on deploy |
 | 196–197 | crispy forms | bootstrap4 pack |
 | 200–211 | CKEditor 5 | rich text for product descriptions |
-| 215 | cart | `CART_SESSION_ID = 'cart'` |
-| 220–232 | M-Pesa | env, keys, shortcode, passkey, callback base URL + token |
+| 341 | cart | `CART_SESSION_ID = 'cart'` |
 
 **Env-var convention:** the course teaches `python-decouple` / `config('X')`.
 This project uses `python-dotenv` instead — write `env('X')`, `env_bool('X')`,
@@ -277,7 +252,6 @@ or `env_list('X')`. Do not add decouple; it would duplicate the job.
 /shop/          catalog.urls
 /cart/          cart.urls
 /orders/        orders.urls
-/payments/      payments.urls
 /ckeditor5/     django_ckeditor_5.urls
 /               core.urls        ← LAST: it is a catch-all prefix
 + media served by staticfiles when DEBUG
@@ -301,24 +275,19 @@ add to cart       POST /cart/add/<id>/        cart.cart_add        (AJAX)
 review cart       /cart/                      cart.cart_detail
                   POST /orders/coupon/apply/  orders.coupon_apply  (session)
 checkout          /orders/checkout/           orders.checkout
-                  → creates Order + OrderItem rows (price snapshot)
-pay               POST /payments/start/<id>/  payments.start
-                  → daraja.stk_push() → phone prompt
-                  /payments/waiting/<id>/     payments.waiting
-                  → JS polls /payments/status/<id>/
-       meanwhile: POST /payments/callback/<token>/   ← Safaricom, server-to-server
-                  → _mark_paid() @transaction.atomic
-resolve           /payments/success/<id>/  or  /failed/<id>/  or  retry
+                  → creates Order + OrderItem rows (price snapshot),
+                    decrements stock, clears cart + coupon
+                    — all inside one @transaction.atomic block
+confirm           /orders/placed/<id>/        orders.order_placed
 ```
 
-### Two entry points, one payment
+### Who may read an order
 
-`payments/views.py` handles both a **browser** polling `status()` and
-Safaricom's **server** POSTing `callback()`. Both can settle the same payment,
-so `_mark_paid()` is `@transaction.atomic` and the write is idempotent.
-`callback` is `@csrf_exempt` (Safaricom has no CSRF token); its security comes
-from the unguessable `<str:token>` segment matched against
-`MPESA_CALLBACK_TOKEN`.
+`orders/views.py:_owns_order()` is the single gate. A member's order is matched
+on `user_id`; a guest's on a list of order ids written into their session by
+`checkout()` at the moment the order is created — the only point at which the
+claim is known to be genuine. Anything else would let someone walk order ids
+and read another buyer's name, phone and address.
 
 ---
 
@@ -344,10 +313,10 @@ distinct asset references on rendered pages resolve to real files.
 ```
 base.html
 ├── blocks: title · meta_description · extra_css · breadcrumb
-│           content · sticky_bar · extra_js
+│           content · extra_js
 ├── includes: offcanvas · header · messages · footer · search_modal
 │
-├── 19 page templates  {% extends 'base.html' %}
+├── 20 page templates  {% extends 'base.html' %}
 └── account/base_entrance.html          ← two-level inheritance
     ├── account/login.html
     └── account/signup.html
@@ -370,14 +339,13 @@ other**, which is what keeps the dependency graph acyclic.
 ```
         core ──────┐
                    ▼
-   cart ────────► catalog ◄──── orders ◄──── payments
+   cart ────────► catalog ◄──── orders
                                    ▲
                              accounts (users/addresses)
 ```
 
-`catalog` is the root; nothing imports upward. `payments` depends only on
-`orders`. `payments/daraja.py` imports no Django models at all — it is a pure
-HTTP client and could be lifted into another project unchanged.
+`catalog` is the root; nothing imports upward. `orders` reads `catalog` (to
+snapshot prices and take stock) and `cart`, and nothing reads `orders`.
 
 `core/views.py` imports `catalog.models`, which makes `core` the least reusable
 app. That is deliberate for a homepage, but it means `core` cannot travel alone.
@@ -390,9 +358,7 @@ import.** Use a context processor instead.
 ## 7. Conventions worth keeping
 
 - **Money is `DecimalField(max_digits=10, decimal_places=2)`** everywhere.
-  Never `FloatField` — binary floats round wrong on prices. The single
-  exception is `MpesaPayment.amount`, an integer because Daraja takes whole
-  shillings.
+  Never `FloatField` — binary floats round wrong on prices.
 - **Purchase history is immutable.** `OrderItem` snapshots `price` at checkout,
   and `PROTECT` prevents deleting a product that appears in an order.
 - **Secrets only via `.env`.** `.gitignore` ignores `.env` and `.env.*` while
@@ -426,24 +392,26 @@ Route sweep: `/`, `/about/`, `/contact/`, `/shop/`, `/shop/<slug>/`, `/cart/`,
 | `Review` = 0 rows | `avg_rating` annotation is `None`; star ratings render empty |
 | `ProductImage` = 0 rows | product galleries fall back to the single main image |
 | `WishlistItem` = 0 rows | wishlist badge always 0 |
-| No tests in `catalog`, `orders`, `accounts`, `core` | only `cart` (49) and `payments` (184) are covered |
+| No tests in `catalog`, `orders`, `accounts`, `core` | only `cart` (49) is covered |
 | JS runtime unverified | files load, but carousel/offcanvas/mixitup init untested in a real browser |
 | `ALLOWED_HOSTS` lacks `testserver` | Django's test client returns 400 unless you pass `Client(SERVER_NAME='localhost')` |
 
 ### Uncommitted work
 
+The payment integration was removed and the storefront put back onto the
+template's own light styling:
+
 ```
- M catalog/management/commands/seed.py
- M catalog/models.py                     +22 lines, methods only — no migration needed
- M catalog/views.py
- M core/views.py
- M myproject/settings.py
- M static/css/theme-dark.css
- M templates/base.html
- M templates/catalog/product_list.html
- M templates/core/home.html
- M templates/includes/product_card.html
-?? static/css/storefront.css             never committed
+ D payments/                             the whole app, and templates/payments/
+ D static/css/theme-dark.css             the dark restyle
+ M myproject/settings.py                 INSTALLED_APPS, M-Pesa block dropped
+ M myproject/urls.py                     /payments/ mount dropped
+ M orders/                               checkout now places the order outright
+ M static/css/storefront.css             rewritten in the template's palette
+ M templates/                            payment copy and the sticky bars removed
+?? templates/orders/placed.html          order confirmation page
+?? orders/migrations/0002_...py          drops Order.paid / Order.stock_applied
+?? core/forms.py                         ContactForm — never committed
 ```
 
 ---
@@ -459,9 +427,5 @@ python manage.py seed               # repeatable demo data (catalog)
 python manage.py createsuperuser
 python manage.py findstatic css/style.css     # debug a missing asset
 python manage.py collectstatic      # deploy only → staticfiles/
-python manage.py test               # cart + payments only
+python manage.py test               # cart only
 ```
-
-**M-Pesa in development** needs a public HTTPS URL Safaricom can POST back to.
-Run ngrok, then set `MPESA_CALLBACK_BASE_URL` and add the host to
-`CSRF_TRUSTED_ORIGINS` in `.env` — otherwise every POST fails the CSRF check.

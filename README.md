@@ -1,8 +1,8 @@
-# Django E-commerce with M-Pesa (Daraja STK Push)
+# Django E-commerce Storefront
 
-A mobile-first online store built on Django 6, styled with a dark restyle of the
+An online store built on Django 6, using the
 [MaleFashion](https://themewagon.com/themes/free-bootstrap-4-html5-ecommerce-website-template-malefashion/)
-ThemeWagon template, taking payment via Safaricom's Daraja STK Push.
+ThemeWagon template as its front end.
 
 ## Quick start
 
@@ -27,100 +27,46 @@ password before this goes anywhere real.**
 | `catalog` | `Category`, `Product`, `ProductImage`, `Review`, `WishlistItem` |
 | `cart` | Session-backed cart — `cart/cart.py` holds the `Cart` class everything reuses |
 | `orders` | `Order`, `OrderItem`, `Coupon`, checkout, order history |
-| `payments` | `payments/daraja.py` (Daraja client), `MpesaPayment`, callback, status polling |
 | `accounts` | `Profile`, `Address`, allauth wiring |
 
-## Getting Daraja sandbox credentials
+## How checkout works
 
-1. Register at [developer.safaricom.co.ke](https://developer.safaricom.co.ke) and log in.
-2. **My Apps → Add a new App**, tick *Lipa Na M-Pesa Sandbox*. This gives you a
-   **Consumer Key** and **Consumer Secret**.
-3. **APIs → Lipa Na M-Pesa Online → Simulate** shows the sandbox **Shortcode**
-   (`174379`) and the **Passkey**.
-4. That same page lists the sandbox test phone numbers and the PIN to use.
-5. Put all four in `.env` and set `MPESA_ENV=sandbox`.
-
-## Testing a payment locally
-
-Safaricom posts the payment result to a callback URL, so it needs to reach your
-machine over **public HTTPS**. Without this, orders are created but stay
-`pending` — the status poller is what stops the checkout hanging.
-
-```bash
-ngrok http 8000
-```
-
-Then in `.env`:
+There is no online payment. Checkout collects delivery details and places the
+order; it is settled with the customer off-site.
 
 ```
-MPESA_CALLBACK_BASE_URL=https://<your-id>.ngrok-free.app
-CSRF_TRUSTED_ORIGINS=https://<your-id>.ngrok-free.app
-ALLOWED_HOSTS=localhost,127.0.0.1,<your-id>.ngrok-free.app
+cart  ->  checkout form (name, phone, county, town, street)
+      ->  Order + OrderItem rows created in one transaction
+      ->  stock decremented, cart and coupon cleared
+      ->  orders:placed confirmation page
 ```
 
-Restart the server, add something to your cart, check out with a sandbox test
-number, and enter the sandbox PIN on the prompt.
+- Line prices are copied from the cart, not re-read from the product, so what
+  the shopper agreed to is what the order records.
+- The order starts at status `pending`; move it through `processing`,
+  `shipped` and `delivered` from the admin.
+- A guest's claim on an order is written into their session at the moment it is
+  created, which is what lets them see the confirmation page without an account
+  and stops anyone else reading it by walking order ids.
 
-### How the payment flow works
+## The front end
 
-```
-checkout  ->  order created (unpaid, stock untouched)
-          ->  payments:start   sends the STK push
-          ->  payments:waiting polls payments:status every 3s
-          ->  Safaricom POSTs  payments:callback
-          ->  order marked paid, stock decremented, cart cleared
-```
+`static/css/style.css` and the rest of `static/` are the template's own files
+and are never edited. Everything the storefront adds on top lives in
+`static/css/storefront.css`, loaded last — mostly places where the template
+uses a link but a real shop needs a form POST (add to cart, wishlist, sign
+out), plus the pages the template never shipped (orders, sign-in, addresses).
+Its colours and metrics are the template's, so the site still looks like the
+template.
 
-Three things are worth knowing about the design:
+`static/js/shop.js` layers add-to-cart-without-a-reload on top of the theme's
+`main.js`. Every form still works with JavaScript off.
 
-- **Stock is decremented when payment is confirmed, not at checkout.** An
-  abandoned STK prompt therefore never holds inventory hostage.
-- **The callback is idempotent.** Safaricom retries until it gets a zero
-  `ResultCode`, so the handler guards on `Order.stock_applied` and returns
-  `{"ResultCode": 0}` for a payment that is already settled. Replaying the same
-  callback changes nothing.
-- **The callback cannot be authenticated** (Safaricom sends no credentials), so
-  the defences are an unguessable URL segment from `MPESA_CALLBACK_TOKEN`,
-  lookup strictly by `CheckoutRequestID`, and never trusting an order id from
-  the request body.
+## Social login (optional)
 
-The status poller also queries Daraja directly, so a dropped tunnel or a lost
-callback still resolves the checkout instead of spinning forever.
-
-## The dark theme
-
-The template is light by default. Every override lives in
-`static/css/theme-dark.css`, loaded **after** the theme's `style.css` — the
-theme's own files are never edited, so re-downloading it cannot clobber the
-restyle.
-
-The palette is a set of CSS custom properties on `:root`. The theme's red
-`#e53637` only reaches 4.07:1 as text on the dark surface, so it is split into
-three roles:
-
-| Token | Value | Use |
-|---|---|---|
-| `--accent` | `#e53637` | Borders, underlines, non-text accents |
-| `--accent-text` | `#ef5350` | Red text — 4.99:1 on `--surface` |
-| `--accent-btn` | `#d32f2f` | Button fills — white on it is 4.98:1 |
-
-All pages were checked to WCAG AA (4.5:1) with a scripted contrast audit.
-
-## Mobile-first notes
-
-The theme is responsive but authored desktop-down; new markup here goes the
-other way. Base styles are the phone, and `md`/`lg` breakpoints add desktop
-affordances back.
-
-- Shop filters collapse behind a **Filter & sort** button on phones and render
-  as the theme's sidebar from `lg` up.
-- Product detail, cart and checkout carry a **sticky bottom action bar**
-  (mobile only) so the primary action never scrolls away.
-- The M-Pesa field is `type="tel" inputmode="numeric"` so handsets show a
-  number pad.
-- Cart lines are cards, not table rows — a table forces sideways scrolling on a
-  phone.
-- Checkout is single-column at every breakpoint.
+Google and Facebook sign-in are wired through django-allauth and read their
+keys from the environment. Leave a provider's keys blank and its button simply
+does not appear — see `.env.example` for where to get them.
 
 ## Licence
 
