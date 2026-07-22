@@ -4,16 +4,6 @@
          data-setbg="{% if product.image %}{{ product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}">
         {% if not product.in_stock %}<span class="label">Sold out</span>{% endif %}
         <ul class="product__hover">
-            {% if user.is_authenticated %}
-                <li>
-                    <form action="{% url 'catalog:wishlist_toggle' product.slug %}" method="post">
-                        {% csrf_token %}
-                        <button type="submit" aria-label="Toggle wishlist">
-                            <img src="{% static 'img/icon/heart.png' %}" alt="">
-                        </button>
-                    </form>
-                </li>
-            {% endif %}
             <li><a href="{{ product.get_absolute_url }}" aria-label="View {{ product.name }}">
                 <img src="{% static 'img/icon/search.png' %}" alt=""></a></li>
         </ul>
@@ -29,11 +19,6 @@
         {% else %}
             <span class="add-cart">Out of stock</span>
         {% endif %}
-        <div class="rating">
-            {% for filled in product.stars %}
-                <i class="fa {% if filled %}fa-star is-filled{% else %}fa-star-o{% endif %}"></i>
-            {% endfor %}
-        </div>
         <h5>KES {{ product.price|floatformat:2 }}</h5>
     </div>
 </div>

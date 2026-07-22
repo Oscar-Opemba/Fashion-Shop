@@ -1,10 +1,6 @@
-from django.conf import settings
 from django.db import models
-from django.db.models import Avg
 from django.urls import reverse
 from django.utils.text import slugify
-
-from django_ckeditor_5.fields import CKEditor5Field
 
 
 class Category(models.Model):
@@ -34,7 +30,7 @@ class Product(models.Model):
     )
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
-    description = CKEditor5Field(blank=True, config_name='extends')
+    description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField(default=0)
     image = models.ImageField(upload_to='products/', blank=True)
@@ -63,27 +59,6 @@ class Product(models.Model):
     def in_stock(self):
         return self.stock > 0
 
-    @property
-    def average_rating(self):
-        """Mean review score, 0 when nothing has been reviewed yet.
-
-        List pages annotate `avg_rating` so a grid of cards costs one query;
-        anything that did not annotate falls back to aggregating.
-        """
-        annotated = getattr(self, 'avg_rating', None)
-        if annotated is not None:
-            return annotated
-        return self.reviews.aggregate(Avg('rating'))['rating__avg'] or 0
-
-    @property
-    def stars(self):
-        """Five booleans, one per star, True where the star is filled.
-
-        The card markup needs this because templates cannot do arithmetic.
-        """
-        filled = int(round(self.average_rating or 0))
-        return [index < filled for index in range(5)]
-
 
 class ProductImage(models.Model):
     """Extra shots feeding the gallery on the product detail page."""
@@ -96,45 +71,3 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f'Image for {self.product}'
-
-
-class Review(models.Model):
-    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
-
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name='reviews'
-    )
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES)
-    comment = models.TextField()
-    created = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['product', 'user'], name='one_review_per_user_per_product'
-            )
-        ]
-
-    def __str__(self):
-        return f'{self.user} on {self.product}: {self.rating}'
-
-
-class WishlistItem(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist'
-    )
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    added = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-added']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'product'], name='one_wishlist_entry_per_product'
-            )
-        ]
-
-    def __str__(self):
-        return f'{self.user} wants {self.product}'

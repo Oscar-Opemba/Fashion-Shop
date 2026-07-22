@@ -1,13 +1,8 @@
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, Q
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, render
 
-from .forms import ReviewForm
-from .models import Category, Product, WishlistItem
+from .models import Category, Product
 
 PAGE_SIZE = 12
 
@@ -46,11 +41,7 @@ def price_band_links(request):
 
 
 def product_list(request):
-    products = (
-        Product.objects.filter(is_active=True)
-        .select_related('category')
-        .annotate(avg_rating=Avg('reviews__rating'))
-    )
+    products = Product.objects.filter(is_active=True).select_related('category')
 
     query = request.GET.get('q', '').strip()
     if query:
@@ -105,82 +96,9 @@ def product_detail(request, slug):
         slug=slug, is_active=True,
     )
 
-    reviews = product.reviews.select_related('user')
-    stats = reviews.aggregate(average=Avg('rating'), total=Count('id'))
-
     return render(request, 'catalog/product_detail.html', {
         'product': product,
-        'reviews': reviews,
-        'average_rating': stats['average'],
-        'review_count': stats['total'],
-        'review_form': ReviewForm(),
-        'already_reviewed': (
-            request.user.is_authenticated
-            and reviews.filter(user=request.user).exists()
-        ),
         'related_products': Product.objects.filter(
             category=product.category, is_active=True
         ).exclude(pk=product.pk)[:4],
-        'in_wishlist': (
-            request.user.is_authenticated
-            and WishlistItem.objects.filter(
-                user=request.user, product=product
-            ).exists()
-        ),
     })
-
-
-@login_required
-@require_POST
-def review_add(request, slug):
-    product = get_object_or_404(Product, slug=slug, is_active=True)
-
-    if product.reviews.filter(user=request.user).exists():
-        messages.info(request, 'You have already reviewed this product.')
-        return redirect(product)
-
-    form = ReviewForm(request.POST)
-    if form.is_valid():
-        review = form.save(commit=False)
-        review.product = product
-        review.user = request.user
-        review.save()
-        messages.success(request, 'Thanks for your review.')
-    else:
-        messages.error(request, 'Please pick a rating and write a comment.')
-
-    return redirect(product)
-
-
-@login_required
-@require_POST
-def wishlist_toggle(request, slug):
-    product = get_object_or_404(Product, slug=slug, is_active=True)
-
-    item, created = WishlistItem.objects.get_or_create(
-        user=request.user, product=product
-    )
-    if not created:
-        item.delete()
-
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({
-            'in_wishlist': created,
-            'count': WishlistItem.objects.filter(user=request.user).count(),
-        })
-
-    messages.success(
-        request,
-        'Added to your wishlist.' if created else 'Removed from your wishlist.',
-    )
-    return redirect(product)
-
-
-@login_required
-def wishlist(request):
-    items = (
-        WishlistItem.objects
-        .filter(user=request.user)
-        .select_related('product', 'product__category')
-    )
-    return render(request, 'catalog/wishlist.html', {'items': items})
