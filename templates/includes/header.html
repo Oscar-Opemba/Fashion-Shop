@@ -5,7 +5,7 @@
             <div class="row">
                 <div class="col-lg-6 col-md-7">
                     <div class="header__top__left">
-                        <p>Pay with M-Pesa. Delivery countrywide.</p>
+                        <p>Free shipping, 30-day return or refund guarantee.</p>
                     </div>
                 </div>
                 <div class="col-lg-6 col-md-5">
@@ -66,10 +66,6 @@
                 <div class="header__nav__option">
                     <a href="#" class="search-switch" aria-label="Search">
                         <img src="{% static 'img/icon/search.png' %}" alt=""></a>
-                    <a href="{% url 'catalog:wishlist' %}" aria-label="Wishlist">
-                        <img src="{% static 'img/icon/heart.png' %}" alt="">
-                        {% if wishlist_count %}<span>{{ wishlist_count }}</span>{% endif %}
-                    </a>
                     <a href="{% url 'cart:detail' %}" aria-label="Cart">
                         <img src="{% static 'img/icon/cart.png' %}" alt="">
                         <span data-cart-count>{{ cart|length }}</span>

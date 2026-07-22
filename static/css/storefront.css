@@ -4,11 +4,135 @@
    The theme's own files are never edited, so this is loaded after style.css.
    Everything here bridges a gap between the template's static markup and a
    real Django shop — mostly places where the theme uses a link but we need a
-   form POST (add to cart, wishlist), or pages the template never shipped.
+   form POST (add to cart, wishlist), or pages the template never shipped
+   (orders, sign-in, addresses).
 
-   It is deliberately NOT a restyle: colours and metrics are taken from the
-   theme so the storefront still looks like the template.
+   It is deliberately NOT a restyle. Every colour and metric below is taken
+   from the theme — #111 text, #b7b7b7 muted, #e1e1e1 borders, #e53637 accent,
+   white page — so the storefront still looks like the template.
    ========================================================================= */
+
+/* ---------- Shared ---------- */
+
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Sign-out has to be a POST, so it is a button styled as the link the theme
+   puts beside it. */
+.header__logout { display: inline; }
+
+.header__logout button {
+    background: none;
+    border: 0;
+    padding: 0 0 0 20px;
+    font-size: 14px;
+    color: #6f6f6f;
+    cursor: pointer;
+}
+
+.header__logout button:hover { color: #e53637; }
+
+/* Variants of the theme's own .site-btn. */
+.site-btn--block { width: 100%; }
+.site-btn--sm { padding: 8px 16px; font-size: 12px; }
+
+/* Actions the theme draws as text links but which must be form submits. */
+.link-button {
+    background: none;
+    border: 0;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #6f6f6f;
+    cursor: pointer;
+}
+
+.link-button:hover { color: #e53637; }
+
+.icon-button {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: #b7b7b7;
+    cursor: pointer;
+}
+
+.icon-button:hover { color: #e53637; }
+
+.site-messages { margin-top: 20px; }
+
+.empty-state {
+    border: 1px solid #e1e1e1;
+    padding: 26px;
+    text-align: center;
+    color: #6f6f6f;
+}
+
+.empty-state a { color: #e53637; }
+
+/* ---------- Forms ---------- */
+/* The theme styles `.checkout__input p` as the field label. Ours are real
+   <label> elements, so they need the same treatment. */
+
+.checkout__input label {
+    display: block;
+    color: #111111;
+    margin-bottom: 12px;
+}
+
+.checkout__input label span { color: #e53637; }
+
+.checkout__input select,
+.checkout__input textarea {
+    width: 100%;
+    border: 1px solid #e1e1e1;
+    font-size: 14px;
+    color: #111111;
+    padding: 12px 20px;
+    margin-bottom: 20px;
+}
+
+.checkout__input--check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkout__input--check label { margin: 0; }
+
+/* The theme sizes every input in this block as a full-width 50px text field,
+   which a tick box must not inherit. allauth's "remember me" is one of these
+   and is not marked with --check, so it is matched on type. */
+.checkout__input input[type="checkbox"],
+.checkout__input input[type="radio"] {
+    width: auto;
+    height: auto;
+    margin: 0 8px 20px 0;
+    padding: 0;
+    vertical-align: middle;
+}
+
+.checkout__input--check input { margin-bottom: 0; }
+
+.form-hint {
+    display: block;
+    color: #b7b7b7;
+    font-size: 12px;
+    margin: -14px 0 20px;
+}
+
+.form-error {
+    display: block;
+    color: #e53637;
+    font-size: 12px;
+    margin: -14px 0 20px;
+}
 
 /* ---------- Product card ---------- */
 /* The theme fades the title out on hover and fades an "Add To Cart" anchor in
@@ -66,4 +190,318 @@
     border: 0;
     padding: 0;
     cursor: pointer;
+}
+
+/* ---------- Product detail ---------- */
+
+.stock-note {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.stock-note--in { color: #19a319; }
+.stock-note--out { color: #e53637; }
+
+/* ---------- Reviews ---------- */
+/* The template's review tab is static copy, so both the list and the post form
+   are ours; they borrow the theme's card metrics. */
+
+.review-item {
+    border: 1px solid #e1e1e1;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.review-item__head {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.review-item__head strong { color: #111111; }
+.review-item__head small { color: #b7b7b7; }
+.review-item__head .rating i { color: #f7941d; font-size: 12px; }
+.review-item p { margin: 12px 0 0; }
+
+.review-form { margin-top: 30px; }
+.review-form .form-group { margin-bottom: 20px; }
+
+.review-form label {
+    display: block;
+    color: #111111;
+    margin-bottom: 12px;
+}
+
+.review-form select,
+.review-form textarea {
+    width: 100%;
+    border: 1px solid #e1e1e1;
+    font-size: 14px;
+    color: #111111;
+    padding: 12px 20px;
+}
+
+/* ---------- Cart and checkout ---------- */
+
+.shopping__cart__btns {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.shopping__cart__btns form { margin: 0; }
+
+/* The template prints the product name as plain text in a cart row; ours links
+   back to the product, so the anchor has to inherit the heading's colour. */
+.product__cart__item__text h6 a { color: #111111; }
+.product__cart__item__text h6 a:hover { color: #e53637; }
+
+.quantity__item .quantity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quantity__item .quantity input {
+    width: 70px;
+    height: 40px;
+    border: 1px solid #e1e1e1;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* The theme has no total row on these lists; it reads as the emphasis of the
+   block, so it is set apart from the lines above it. */
+.cart__total ul li.grand-total,
+.checkout__total__all li.grand-total {
+    color: #111111;
+    font-weight: 700;
+    font-size: 17px;
+}
+
+.coupon-form { margin: 20px 0 30px; }
+
+.coupon-form__row {
+    display: flex;
+    gap: 10px;
+    max-width: 420px;
+}
+
+.coupon-form__row input {
+    flex: 1 1 auto;
+    height: 50px;
+    border: 1px solid #e1e1e1;
+    font-size: 14px;
+    padding-left: 20px;
+}
+
+.coupon-remove-row { text-align: right; }
+.coupon-remove { color: #e53637; font-size: 13px; }
+
+.checkout__order__note {
+    font-size: 13px;
+    color: #6f6f6f;
+    border-left: 3px solid #e53637;
+    padding: 4px 0 4px 14px;
+    margin: 20px 0;
+}
+
+/* ---------- Orders ---------- */
+
+.order-line {
+    border: 1px solid #e1e1e1;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.order-line__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.order-line__head h6 { margin: 0; }
+
+.order-line__body {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    color: #6f6f6f;
+    margin-top: 10px;
+}
+
+.order-line__body strong { color: #e53637; }
+
+.status-pill {
+    display: inline-block;
+    border: 1px solid #e1e1e1;
+    border-radius: 999px;
+    padding: 4px 14px;
+    font-size: 12px;
+    color: #6f6f6f;
+}
+
+.status-pill--processing,
+.status-pill--shipped,
+.status-pill--delivered { border-color: #19a319; color: #19a319; }
+.status-pill--cancelled { border-color: #e53637; color: #e53637; }
+
+.order-placed {
+    border: 1px solid #e1e1e1;
+    padding: 40px 30px;
+    text-align: center;
+}
+
+.order-placed__icon {
+    font-size: 54px;
+    color: #19a319;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.order-placed__meta {
+    list-style: none;
+    padding: 0;
+    margin: 26px auto;
+    max-width: 420px;
+    text-align: left;
+}
+
+.order-placed__meta li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #6f6f6f;
+    padding: 10px 0;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.order-placed__meta li span { color: #111111; text-align: right; }
+
+.order-placed__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* ---------- Account ---------- */
+
+.auth-card__lead { color: #6f6f6f; margin-bottom: 20px; }
+
+.auth-card__alt {
+    font-size: 14px;
+    margin-top: 14px;
+    text-align: center;
+}
+
+.auth-card__alt a { color: #e53637; }
+
+/* Social sign-in. The buttons are form submits, not links, so every visual
+   property the theme would have given an <a> is set here. */
+
+.social-login { margin-top: 26px; }
+
+.social-login__divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    color: #b7b7b7;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.social-login__divider::before,
+.social-login__divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e1e1e1;
+}
+
+.social-login form { margin: 0 0 10px; }
+.social-login form:last-child { margin-bottom: 0; }
+
+.social-btn {
+    width: 100%;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid #e1e1e1;
+    background: #ffffff;
+    color: #111111;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 16px;
+    cursor: pointer;
+    transition: filter .2s;
+}
+
+.social-btn:hover { filter: brightness(.97); }
+.social-btn i { font-size: 16px; }
+
+/* Facebook's stock #1877f2 only reaches 4.23:1 behind white text, so it is
+   darkened to #0e5fc0 (6.15:1). Google keeps the light face above, which is
+   both its own button spec and 16.1:1. */
+.social-btn--facebook { background: #0e5fc0; color: #ffffff; border-color: #0e5fc0; }
+
+.address-card {
+    border: 1px solid #e1e1e1;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.address-card--default { border-color: #e53637; }
+
+.address-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.address-card__actions {
+    display: flex;
+    gap: 16px;
+}
+
+.address-card__actions a { color: #6f6f6f; font-size: 14px; }
+.address-card__actions a:hover { color: #e53637; }
+
+/* ---------- Toast ---------- */
+/* Feedback for the ajax add-to-cart, which otherwise changes nothing the
+   shopper can see except the header count. */
+
+.toast-note {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translate(-50%, 12px);
+    background: #ffffff;
+    color: #111111;
+    border: 1px solid #e1e1e1;
+    border-left: 3px solid #19a319;
+    padding: 12px 18px;
+    font-size: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
+    opacity: 0;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 1200;
+    max-width: calc(100vw - 32px);
+}
+
+.toast-note--error { border-left-color: #e53637; }
+.toast-note.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+@media (min-width: 992px) {
+    /* Bootstrap 4's .collapse hides the sidebar; force it visible on desktop
+       where it is a permanent column, not a collapsible panel. */
+    .shop__sidebar.collapse:not(.show) { display: block !important; }
 }

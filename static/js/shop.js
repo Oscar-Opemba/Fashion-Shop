@@ -77,16 +77,6 @@
             });
     });
 
-    // Product gallery: swap the main image when a thumbnail is picked.
-    var mainImage = document.getElementById('mainProductImage');
-    if (mainImage) {
-        document.querySelectorAll('.product__details__thumbs .thumb').forEach(function (thumb) {
-            thumb.addEventListener('click', function () {
-                mainImage.src = thumb.dataset.full;
-                document.querySelectorAll('.product__details__thumbs .thumb')
-                    .forEach(function (t) { t.classList.remove('is-active'); });
-                thumb.classList.add('is-active');
-            });
-        });
-    }
+    // The product gallery now uses the theme's Bootstrap tabs, so no custom
+    // image-swapping code is needed here.
 })();

@@ -1,6 +1,7 @@
-{# allauth's confirmation step. The buttons in includes/social_login.html POST
-   straight to the provider, so this is only reached when a provider login url
-   is opened with a GET — a bookmark, or a "connect account" link. #}
+{% comment %}allauth's confirmation step. The buttons in
+includes/social_login.html POST straight to the provider, so this is only
+reached when a provider login url is opened with a GET — a bookmark, or a
+"connect account" link.{% endcomment %}
 
 {% extends 'account/base_entrance.html' %}
 

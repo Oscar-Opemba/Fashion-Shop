@@ -3,10 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="description" content="{% block meta_description %}Shop online and pay with M-Pesa.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Shop the latest fashion online.{% endblock %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#111111">
     <title>{% block title %}Shop{% endblock %}</title>
+
+    <link rel="icon" href="{% static 'img/logo.png' %}" type="image/png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800;900&display=swap"
@@ -21,8 +22,7 @@
     <link rel="stylesheet" href="{% static 'css/slicknav.min.css' %}" type="text/css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}" type="text/css">
 
-    {# Loaded last so these win over the theme without editing the theme's files. #}
-    <link rel="stylesheet" href="{% static 'css/theme-dark.css' %}" type="text/css">
+    {# Loaded last so it wins over the theme without editing the theme's files. #}
     <link rel="stylesheet" href="{% static 'css/storefront.css' %}" type="text/css">
 
     {% block extra_css %}{% endblock %}
@@ -40,8 +40,6 @@
 
     {% include 'includes/footer.html' %}
     {% include 'includes/search_modal.html' %}
-
-    {% block sticky_bar %}{% endblock %}
 
     <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>

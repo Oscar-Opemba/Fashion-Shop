@@ -16,10 +16,6 @@
     <div class="offcanvas__nav__option">
         <a href="#" class="search-switch" aria-label="Search">
             <img src="{% static 'img/icon/search.png' %}" alt=""></a>
-        <a href="{% url 'catalog:wishlist' %}" aria-label="Wishlist">
-            <img src="{% static 'img/icon/heart.png' %}" alt="">
-            {% if wishlist_count %}<span>{{ wishlist_count }}</span>{% endif %}
-        </a>
         <a href="{% url 'cart:detail' %}" aria-label="Cart">
             <img src="{% static 'img/icon/cart.png' %}" alt="">
             <span data-cart-count>{{ cart|length }}</span>
@@ -28,6 +24,6 @@
     </div>
     <div id="mobile-menu-wrap"></div>
     <div class="offcanvas__text">
-        <p>Pay with M-Pesa. Delivery countrywide.</p>
+        <p>Free shipping, 30-day return or refund guarantee.</p>
     </div>
 </div>

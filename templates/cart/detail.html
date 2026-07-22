@@ -13,42 +13,57 @@
         {% if cart|length %}
             <div class="row">
                 <div class="col-lg-8">
-                    {# A table would force a horizontal scroll on a phone, so #}
-                    {# each line is its own card and the table only appears   #}
-                    {# from md up.                                            #}
-                    <div class="cart-lines">
-                        {% for item in cart %}
-                            <div class="cart-line">
-                                <a class="cart-line__pic" href="{{ item.product.get_absolute_url }}">
-                                    <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}"
-                                         alt="{{ item.product.name }}" loading="lazy">
-                                </a>
-                                <div class="cart-line__body">
-                                    <h6><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></h6>
-                                    <span class="cart-line__unit">KES {{ item.price|floatformat:2 }} each</span>
-
-                                    <form action="{% url 'cart:add' item.product.id %}" method="post"
-                                          class="cart-line__qty">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="override" value="true">
-                                        <label for="qty-{{ item.product.id }}" class="sr-only">Quantity</label>
-                                        <input type="number" id="qty-{{ item.product.id }}" name="quantity"
-                                               value="{{ item.quantity }}" min="1" max="{{ item.product.stock }}"
-                                               inputmode="numeric">
-                                        <button type="submit" class="site-btn site-btn--sm">Update</button>
-                                    </form>
-                                </div>
-                                <div class="cart-line__end">
-                                    <span class="cart-line__total">KES {{ item.total_price|floatformat:2 }}</span>
-                                    <form action="{% url 'cart:remove' item.product.id %}" method="post">
-                                        {% csrf_token %}
-                                        <button type="submit" class="icon-button" aria-label="Remove {{ item.product.name }}">
-                                            <span class="icon_close"></span>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        {% endfor %}
+                    <div class="shopping__cart__table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Total</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart %}
+                                    <tr>
+                                        <td class="product__cart__item">
+                                            <div class="product__cart__item__pic">
+                                                <a href="{{ item.product.get_absolute_url }}">
+                                                    <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}"
+                                                         alt="{{ item.product.name }}" loading="lazy">
+                                                </a>
+                                            </div>
+                                            <div class="product__cart__item__text">
+                                                <h6><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></h6>
+                                                <h5>KES {{ item.price|floatformat:2 }}</h5>
+                                            </div>
+                                        </td>
+                                        <td class="quantity__item">
+                                            <form action="{% url 'cart:add' item.product.id %}" method="post"
+                                                  class="quantity">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="override" value="true">
+                                                <label for="row-qty-{{ item.product.id }}" class="sr-only">Quantity</label>
+                                                <input type="number" id="row-qty-{{ item.product.id }}" name="quantity"
+                                                       value="{{ item.quantity }}" min="1" max="{{ item.product.stock }}"
+                                                       inputmode="numeric">
+                                                <button type="submit" class="site-btn site-btn--sm">Update</button>
+                                            </form>
+                                        </td>
+                                        <td class="cart__price">KES {{ item.total_price|floatformat:2 }}</td>
+                                        <td class="cart__close">
+                                            <form action="{% url 'cart:remove' item.product.id %}" method="post">
+                                                {% csrf_token %}
+                                                <button type="submit" class="icon-button"
+                                                        aria-label="Remove {{ item.product.name }}">
+                                                    <i class="fa fa-close"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
 
                     <div class="shopping__cart__btns">
@@ -61,6 +76,17 @@
                 </div>
 
                 <div class="col-lg-4">
+                    {# Coupons are validated at checkout, so applying one here #}
+                    {# takes you straight there.                                #}
+                    <div class="cart__discount">
+                        <h6>Discount codes</h6>
+                        <form action="{% url 'orders:coupon_apply' %}" method="post">
+                            {% csrf_token %}
+                            <label for="id_code" class="sr-only">Coupon code</label>
+                            <input type="text" id="id_code" name="code" placeholder="Coupon code">
+                            <button type="submit">Apply</button>
+                        </form>
+                    </div>
                     <div data-cart-summary>
                         {% include 'cart/_summary.html' %}
                     </div>
@@ -78,13 +104,4 @@
         {% endif %}
     </div>
 </section>
-{% endblock %}
-
-{% block sticky_bar %}
-    {% if cart|length %}
-        <div class="sticky-bar d-lg-none">
-            <span class="sticky-bar__price">KES {{ cart.get_total_price|floatformat:2 }}</span>
-            <a href="{% url 'orders:checkout' %}" class="primary-btn">Checkout</a>
-        </div>
-    {% endif %}
 {% endblock %}
