@@ -18,11 +18,11 @@ This project splits models by app instead of one big `models.py`:
 
 | File | Models |
 |---|---|
-| `catalog/models.py` | `Category`, `Product`, `ProductImage` |
+| `shop/models.py` | `Category`, `Product`, `ProductImage` |
 | `orders/models.py` | `Coupon`, `Order`, `OrderItem` |
 | `accounts/models.py` | `Profile`, `Address` |
 
-Open `catalog/models.py` on screen and point at:
+Open `shop/models.py` on screen and point at:
 
 - `Category.save()` — auto-slugs from the name, so nobody types slugs by hand
 - `Product.category` — `ForeignKey(..., related_name='products')`
@@ -43,7 +43,7 @@ python manage.py shell
 ```
 
 ```python
-from catalog.models import Category, Product
+from shop.models import Category, Product
 from orders.models import Order, OrderItem
 from django.contrib.auth import get_user_model
 
@@ -105,11 +105,11 @@ DATABASES = {
 ### Step 2: current state
 
 ```bash
-python manage.py showmigrations catalog orders accounts
+python manage.py showmigrations shop orders accounts
 ```
 
 ```
-catalog
+shop
  [X] 0001_initial
  [X] 0002_remove_review_one_review_per_user_per_product_and_more
 orders
@@ -131,7 +131,7 @@ a project misbehaves.
 ### Step 3: see the SQL without running it
 
 ```bash
-python manage.py sqlmigrate catalog 0001 | head -20
+python manage.py sqlmigrate shop 0001 | head -20
 ```
 
 Shows the actual `CREATE TABLE` statements. Good moment to point out that the
@@ -139,7 +139,7 @@ ORM is generating SQL for you, not replacing it.
 
 ### Step 4: the live change → migrate → rollback loop
 
-This is the part worth rehearsing. In `catalog/models.py`, add one line to
+This is the part worth rehearsing. In `shop/models.py`, add one line to
 `Product` right under `is_active`:
 
 ```python
@@ -147,11 +147,11 @@ This is the part worth rehearsing. In `catalog/models.py`, add one line to
 ```
 
 ```bash
-python manage.py makemigrations catalog
+python manage.py makemigrations shop
 ```
 ```
-Migrations for 'catalog':
-  catalog/migrations/0003_product_featured.py
+Migrations for 'shop':
+  shop/migrations/0003_product_featured.py
     + Add field featured to product
 ```
 
@@ -159,13 +159,13 @@ Open the generated file — it's short, show the `AddField` operation and the
 `dependencies` list pointing at `0002`.
 
 ```bash
-python manage.py migrate catalog
-#   Applying catalog.0003_product_featured... OK
+python manage.py migrate shop
+#   Applying shop.0003_product_featured... OK
 
-python manage.py migrate catalog 0002        # <- rollback
-#   Unapplying catalog.0003_product_featured... OK
+python manage.py migrate shop 0002        # <- rollback
+#   Unapplying shop.0003_product_featured... OK
 
-python manage.py showmigrations catalog
+python manage.py showmigrations shop
 # [X] 0001_initial
 # [X] 0002_remove_review_...
 # [ ] 0003_product_featured     <- unchecked
@@ -174,8 +174,8 @@ python manage.py showmigrations catalog
 **Clean up before moving on** (otherwise you leave the repo dirty):
 
 ```bash
-rm catalog/migrations/0003_product_featured.py
-# then remove the `featured` line from catalog/models.py
+rm shop/migrations/0003_product_featured.py
+# then remove the `featured` line from shop/models.py
 python manage.py makemigrations --check --dry-run   # No changes detected
 ```
 
@@ -186,9 +186,9 @@ python manage.py shell
 ```
 ```python
 from django.db import connection
-[t for t in connection.introspection.table_names() if t.startswith(('catalog_','orders_','accounts_'))]
-# ['accounts_address', 'accounts_profile', 'catalog_category',
-#  'catalog_product', 'catalog_productimage',
+[t for t in connection.introspection.table_names() if t.startswith(('shop_','orders_','accounts_'))]
+# ['accounts_address', 'accounts_profile', 'shop_category',
+#  'shop_product', 'shop_productimage',
 #  'orders_coupon', 'orders_order', 'orders_orderitem']
 ```
 
@@ -208,7 +208,7 @@ python manage.py createsuperuser
 
 ### Step 2: the registration code
 
-Open `catalog/admin.py`. Point out this project uses the `@admin.register(Model)`
+Open `shop/admin.py`. Point out this project uses the `@admin.register(Model)`
 decorator rather than `admin.site.register(Model, ModelAdmin)` at the bottom —
 same result, less repetition.
 
@@ -224,13 +224,13 @@ Go to <http://127.0.0.1:8000/admin/> and log in.
 
 All of these were verified returning HTTP 200.
 
-**Categories** (`/admin/catalog/category/`)
+**Categories** (`/admin/shop/category/`)
 - `list_display` shows a **`product_count` column** — that's a custom method on
   the admin class, not a model field
 - Click "Add category", type a name, watch **`prepopulated_fields`** fill the
   slug live as you type. This is the best single visual in the whole module.
 
-**Products** (`/admin/catalog/product/`)
+**Products** (`/admin/shop/product/`)
 - `list_filter` sidebar — filter by category / active / created
 - **`list_editable`** — change price and stock straight from the list, then Save.
   Most demos never show this.

@@ -11,7 +11,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('accounts/', include('accounts.urls')),
 
-    path('shop/', include('catalog.urls')),
+    path('shop/', include('shop.urls')),
     path('cart/', include('cart.urls')),
     path('orders/', include('orders.urls')),
     path('ckeditor5/', include('django_ckeditor_5.urls')),

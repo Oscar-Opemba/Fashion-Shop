@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.test import TestCase, override_settings
 
-from catalog.models import Category, Product
+from shop.models import Category, Product
 
 
 @override_settings(ALLOWED_HOSTS=['testserver'])

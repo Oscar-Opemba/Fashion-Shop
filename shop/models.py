@@ -21,7 +21,7 @@ class Category(models.Model):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return f"{reverse('catalog:product_list')}?category={self.slug}"
+        return f"{reverse('shop:product_list')}?category={self.slug}"
 
 
 class Product(models.Model):
@@ -53,7 +53,7 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
-        return reverse('catalog:product_detail', args=[self.slug])
+        return reverse('shop:product_detail', args=[self.slug])
 
     @property
     def in_stock(self):

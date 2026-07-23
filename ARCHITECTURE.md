@@ -36,10 +36,10 @@ Fashion-Shop/
 │   ├── __init__.py
 │   ├── apps.py                             CoreConfig
 │   ├── urls.py                        11   app_name='core' — home, about, contact
-│   ├── views.py                       24   home() queries catalog for the homepage
+│   ├── views.py                       24   home() queries shop for the homepage
 │   └── migrations/__init__.py              no migrations — app owns no models
 │
-├── catalog/                                ── PRODUCTS — the domain center ──
+├── shop/                                ── PRODUCTS — the domain center ──
 │   ├── __init__.py
 │   ├── apps.py
 │   ├── models.py                     140   Category, Product, ProductImage,
@@ -48,7 +48,7 @@ Fashion-Shop/
 │   │                                       review_add, wishlist_toggle, wishlist
 │   ├── forms.py                       16   ReviewForm
 │   ├── admin.py                       40   4 x @admin.register + 1 plain register
-│   ├── urls.py                        13   app_name='catalog'
+│   ├── urls.py                        13   app_name='shop'
 │   ├── context_processors.py          14   nav_categories + wishlist_count,
 │   │                                       injected into EVERY template
 │   ├── migrations/
@@ -114,7 +114,7 @@ Fashion-Shop/
 │   │   ├── about.html                 34
 │   │   └── contact.html               37
 │   │
-│   ├── catalog/
+│   ├── shop/
 │   │   ├── product_detail.html       176   largest template — gallery, reviews
 │   │   ├── product_list.html         139   ⚠️ MODIFIED — filters, sorting
 │   │   └── wishlist.html              30
@@ -180,7 +180,7 @@ at deploy time, gitignored.
 
 10 models across 3 apps. `core` and `cart` deliberately own none.
 
-### catalog (`catalog/models.py`, 140 LOC)
+### shop (`shop/models.py`, 140 LOC)
 
 | Model | Key fields | Notes |
 |---|---|---|
@@ -249,7 +249,7 @@ or `env_list('X')`. Do not add decouple; it would duplicate the job.
 ```
 /admin/         django admin
 /accounts/      allauth.urls, then accounts.urls
-/shop/          catalog.urls
+/shop/          shop.urls
 /cart/          cart.urls
 /orders/        orders.urls
 /ckeditor5/     django_ckeditor_5.urls
@@ -258,18 +258,18 @@ or `env_list('X')`. Do not add decouple; it would duplicate the job.
 ```
 
 Every app sets `app_name`, so all reverses are namespaced:
-`{% url 'core:home' %}`, `{% url 'catalog:product_detail' slug=... %}`.
+`{% url 'core:home' %}`, `{% url 'shop:product_detail' slug=... %}`.
 Only allauth's own names (`account_login`, `account_signup`) are bare.
 
-**Ordering trap** in `catalog/urls.py`: the literal `wishlist/` route is
+**Ordering trap** in `shop/urls.py`: the literal `wishlist/` route is
 declared *before* `<slug:slug>/`. Django matches top-down, so a slug catch-all
 placed first would swallow `/shop/wishlist/`.
 
 ### The purchase path
 
 ```
-browse            /shop/                      catalog.product_list
-                  /shop/<slug>/               catalog.product_detail
+browse            /shop/                      shop.product_list
+                  /shop/<slug>/               shop.product_detail
 add to cart       POST /cart/add/<id>/        cart.cart_add        (AJAX)
                   → Cart.add() mutates request.session
 review cart       /cart/                      cart.cart_detail
@@ -327,7 +327,7 @@ base.html
 | Processor | Injects | Why |
 |---|---|---|
 | `cart.context_processors.cart` | `cart` | header item count + running total |
-| `catalog.context_processors.catalog` | `nav_categories`, `wishlist_count` | nav menu + wishlist badge |
+| `shop.context_processors.shop` | `nav_categories`, `wishlist_count` | nav menu + wishlist badge |
 
 These exist so apps can share data with templates **without importing each
 other**, which is what keeps the dependency graph acyclic.
@@ -339,18 +339,18 @@ other**, which is what keeps the dependency graph acyclic.
 ```
         core ──────┐
                    ▼
-   cart ────────► catalog ◄──── orders
+   cart ────────► shop ◄──── orders
                                    ▲
                              accounts (users/addresses)
 ```
 
-`catalog` is the root; nothing imports upward. `orders` reads `catalog` (to
+`shop` is the root; nothing imports upward. `orders` reads `shop` (to
 snapshot prices and take stock) and `cart`, and nothing reads `orders`.
 
-`core/views.py` imports `catalog.models`, which makes `core` the least reusable
+`core/views.py` imports `shop.models`, which makes `core` the least reusable
 app. That is deliberate for a homepage, but it means `core` cannot travel alone.
 
-**If `catalog` ever imports from `core`, startup breaks with a circular
+**If `shop` ever imports from `core`, startup breaks with a circular
 import.** Use a context processor instead.
 
 ---
@@ -392,7 +392,7 @@ Route sweep: `/`, `/about/`, `/contact/`, `/shop/`, `/shop/<slug>/`, `/cart/`,
 | `Review` = 0 rows | `avg_rating` annotation is `None`; star ratings render empty |
 | `ProductImage` = 0 rows | product galleries fall back to the single main image |
 | `WishlistItem` = 0 rows | wishlist badge always 0 |
-| No tests in `catalog`, `orders`, `accounts`, `core` | only `cart` (49) is covered |
+| No tests in `shop`, `orders`, `accounts`, `core` | only `cart` (49) is covered |
 | JS runtime unverified | files load, but carousel/offcanvas/mixitup init untested in a real browser |
 | `ALLOWED_HOSTS` lacks `testserver` | Django's test client returns 400 unless you pass `Client(SERVER_NAME='localhost')` |
 
@@ -423,7 +423,7 @@ python manage.py runserver          # dev server at 127.0.0.1:8000
 python manage.py check              # system checks
 python manage.py makemigrations     # after editing any models.py
 python manage.py migrate            # apply migrations
-python manage.py seed               # repeatable demo data (catalog)
+python manage.py seed               # repeatable demo data (shop)
 python manage.py createsuperuser
 python manage.py findstatic css/style.css     # debug a missing asset
 python manage.py collectstatic      # deploy only → staticfiles/

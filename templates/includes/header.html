@@ -41,15 +41,15 @@
                         <li{% if request.resolver_match.view_name == 'core:home' %} class="active"{% endif %}>
                             <a href="{% url 'core:home' %}">Home</a>
                         </li>
-                        <li{% if request.resolver_match.app_name == 'catalog' %} class="active"{% endif %}>
-                            <a href="{% url 'catalog:product_list' %}">Shop</a>
+                        <li{% if request.resolver_match.app_name == 'shop' %} class="active"{% endif %}>
+                            <a href="{% url 'shop:product_list' %}">Shop</a>
                         </li>
                         <li><a href="#">Categories</a>
                             <ul class="dropdown">
                                 {% for category in nav_categories %}
                                     <li><a href="{{ category.get_absolute_url }}">{{ category.name }}</a></li>
                                 {% empty %}
-                                    <li><a href="{% url 'catalog:product_list' %}">All products</a></li>
+                                    <li><a href="{% url 'shop:product_list' %}">All products</a></li>
                                 {% endfor %}
                             </ul>
                         </li>

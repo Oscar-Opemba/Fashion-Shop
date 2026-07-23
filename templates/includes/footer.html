@@ -14,7 +14,7 @@
                 <div class="footer__widget">
                     <h6>Shop</h6>
                     <ul>
-                        <li><a href="{% url 'catalog:product_list' %}">All products</a></li>
+                        <li><a href="{% url 'shop:product_list' %}">All products</a></li>
                         {% for category in nav_categories|slice:":3" %}
                             <li><a href="{{ category.get_absolute_url }}">{{ category.name }}</a></li>
                         {% endfor %}

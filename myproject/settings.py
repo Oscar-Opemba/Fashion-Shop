@@ -63,7 +63,7 @@ INSTALLED_APPS = [
 
     # Local
     'core',
-    'catalog',
+    'shop',
     'cart',
     'orders',
     'accounts',
@@ -94,7 +94,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'cart.context_processors.cart',
-                'catalog.context_processors.catalog',
+                'shop.context_processors.shop',
             ],
         },
     },

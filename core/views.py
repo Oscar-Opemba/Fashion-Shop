@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.core.mail import send_mail
 from django.shortcuts import redirect, render
 
-from catalog.models import Category, Product
+from shop.models import Category, Product
 
 from .forms import ContactForm
 

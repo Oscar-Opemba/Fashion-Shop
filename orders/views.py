@@ -7,7 +7,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from cart.cart import Cart
-from catalog.models import Product
+from shop.models import Product
 
 from .forms import CouponApplyForm, OrderCreateForm
 from .models import Order, OrderItem
@@ -20,7 +20,7 @@ def checkout(request):
 
     if len(cart) == 0:
         messages.info(request, 'Your cart is empty.')
-        return redirect('catalog:product_list')
+        return redirect('shop:product_list')
 
     issues = cart.has_stock_issues()
     if issues:

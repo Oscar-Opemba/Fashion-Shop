@@ -76,7 +76,7 @@ def product_list(request):
     params = request.GET.copy()
     params.pop('page', None)
 
-    return render(request, 'catalog/product_list.html', {
+    return render(request, 'shop/product_list.html', {
         'page_obj': page,
         'products': page.object_list,
         'categories': Category.objects.annotate(
@@ -96,7 +96,7 @@ def product_detail(request, slug):
         slug=slug, is_active=True,
     )
 
-    return render(request, 'catalog/product_detail.html', {
+    return render(request, 'shop/product_detail.html', {
         'product': product,
         'related_products': Product.objects.filter(
             category=product.category, is_active=True

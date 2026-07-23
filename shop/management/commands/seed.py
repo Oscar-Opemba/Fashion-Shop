@@ -14,13 +14,13 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from accounts.models import Profile
-from catalog.models import Category, Product
+from shop.models import Category, Product
 
 
 def needs_image(field):
     """True when a field has no file, or names one that has gone missing.
 
-    media/ is gitignored, so a clone starts with catalog rows pointing at
+    media/ is gitignored, so a clone starts with shop rows pointing at
     photos that were never checked in. Without this the cards render but
     every image 404s, which reads as the products being invisible.
     """
@@ -76,7 +76,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             '--flush', action='store_true',
-            help='Delete existing catalog data before seeding.',
+            help='Delete existing shop data before seeding.',
         )
 
     @transaction.atomic
@@ -87,7 +87,7 @@ class Command(BaseCommand):
         if options['flush']:
             Product.objects.all().delete()
             Category.objects.all().delete()
-            self.stdout.write('Cleared existing catalog data.')
+            self.stdout.write('Cleared existing shop data.')
 
         image_dir = Path(settings.BASE_DIR) / 'static' / 'img' / 'product'
         images = sorted(image_dir.glob('*.jpg'))

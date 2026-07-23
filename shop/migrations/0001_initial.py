@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                 ('image', models.ImageField(blank=True, upload_to='products/')),
                 ('is_active', models.BooleanField(default=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('category', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='products', to='catalog.category')),
+                ('category', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='products', to='shop.category')),
             ],
             options={
                 'ordering': ['-created'],
@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('image', models.ImageField(upload_to='products/')),
                 ('alt', models.CharField(blank=True, max_length=200)),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='images', to='catalog.product')),
+                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='images', to='shop.product')),
             ],
         ),
         migrations.CreateModel(
@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
                 ('rating', models.PositiveSmallIntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')])),
                 ('comment', models.TextField()),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='catalog.product')),
+                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='shop.product')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
             options={
@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('added', models.DateTimeField(auto_now_add=True)),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='catalog.product')),
+                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='shop.product')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='wishlist', to=settings.AUTH_USER_MODEL)),
             ],
             options={
@@ -83,11 +83,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='product',
-            index=models.Index(fields=['slug'], name='catalog_pro_slug_2b1eb6_idx'),
+            index=models.Index(fields=['slug'], name='shop_produc_slug_76971b_idx'),
         ),
         migrations.AddIndex(
             model_name='product',
-            index=models.Index(fields=['-created'], name='catalog_pro_created_b92f5e_idx'),
+            index=models.Index(fields=['-created'], name='shop_produc_created_ef211c_idx'),
         ),
         migrations.AddConstraint(
             model_name='review',

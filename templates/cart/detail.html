@@ -67,7 +67,7 @@
                     </div>
 
                     <div class="shopping__cart__btns">
-                        <a href="{% url 'catalog:product_list' %}" class="primary-btn cart-btn">Continue shopping</a>
+                        <a href="{% url 'shop:product_list' %}" class="primary-btn cart-btn">Continue shopping</a>
                         <form action="{% url 'cart:clear' %}" method="post" class="d-inline">
                             {% csrf_token %}
                             <button type="submit" class="primary-btn cart-btn cart-btn-right">Empty cart</button>
@@ -97,7 +97,7 @@
                 <div class="col-12">
                     <p class="empty-state">
                         Your cart is empty.
-                        <a href="{% url 'catalog:product_list' %}">Start shopping</a>
+                        <a href="{% url 'shop:product_list' %}">Start shopping</a>
                     </p>
                 </div>
             </div>

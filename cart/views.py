@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST
 
-from catalog.models import Product
+from shop.models import Product
 
 from .cart import Cart
 

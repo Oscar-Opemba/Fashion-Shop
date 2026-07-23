@@ -24,7 +24,7 @@ password before this goes anywhere real.**
 | App | What it owns |
 |---|---|
 | `core` | Home, about, contact, `base.html` and shared includes |
-| `catalog` | `Category`, `Product`, `ProductImage`, `Review`, `WishlistItem` |
+| `shop` | `Category`, `Product`, `ProductImage`, `Review`, `WishlistItem` |
 | `cart` | Session-backed cart — `cart/cart.py` holds the `Cart` class everything reuses |
 | `orders` | `Order`, `OrderItem`, `Coupon`, checkout, order history |
 | `accounts` | `Profile`, `Address`, allauth wiring |
