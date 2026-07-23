@@ -13,6 +13,7 @@ from django.core.files import File
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from accounts.models import Profile
 from catalog.models import Category, Product
 
 
@@ -151,5 +152,13 @@ class Command(BaseCommand):
                 'Superuser created — admin@example.com / admin12345. '
                 'Change this password before deploying anywhere.'
             ))
+
+        # Users made before the Profile signal existed have no profile row.
+        backfilled = 0
+        for user in User.objects.filter(profile__isnull=True):
+            Profile.objects.create(user=user)
+            backfilled += 1
+        if backfilled:
+            self.stdout.write(f'Profiles backfilled: {backfilled}')
 
         self.stdout.write(self.style.SUCCESS('Seed complete.'))
