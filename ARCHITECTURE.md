@@ -5,7 +5,7 @@ session-based cart, guest checkout, and M-Pesa payment through Safaricom's
 Daraja API (STK Push).
 
 - **~3,500 lines** of Python (excluding migrations and the virtualenv)
-- **2,031 lines** across 32 templates
+- **2,241 lines** across 36 templates
 - **7 apps**, 11 models, 111 static files, 28 uploaded media files
 
 ---
@@ -97,7 +97,7 @@ Fashion-Shop/
 │   ├── tests.py                       92
 │   └── migrations/0001_initial.py
 │
-├── templates/                              ── 32 FILES, 2,031 LINES ──
+├── templates/                              ── 36 FILES, 2,241 LINES ──
 │   ├── base.html                      59   the skeleton every page extends
 │   │
 │   ├── includes/                           8 reusable partials
@@ -117,7 +117,11 @@ Fashion-Shop/
 │   │
 │   ├── shop/
 │   │   ├── product_detail.html       197   gallery, sizes/colours, add to cart
-│   │   └── product_list.html         194   search, category, price, size, colour
+│   │   ├── product_list.html         194   search, category, price, size, colour
+│   │   ├── manage_list.html          102   staff catalogue table
+│   │   ├── product_form.html          53   create + edit, both models
+│   │   ├── product_confirm_delete.html 27
+│   │   └── category_confirm_delete.html 25
 │   │
 │   ├── cart/
 │   │   ├── detail.html               107
@@ -310,7 +314,36 @@ Only allauth's own names (`account_login`, `account_signup`) are bare.
 **Ordering trap** in `shop/urls.py`: `<slug:slug>/` is a catch-all under
 `/shop/`. Django matches top-down, so any literal route added later (`sale/`,
 `new-in/`) must be declared **above** it or the slug pattern swallows it and
-raises a 404 for a product that does not exist.
+raises a 404 for a product that does not exist. The `manage/` and
+`manage-category/` routes are declared above it for exactly that reason.
+
+### Staff catalogue management
+
+```
+/shop/manage/                          ProductManageList    (inactive rows too)
+/shop/manage/new/                      ProductCreateView
+/shop/manage/<slug>/edit/              ProductUpdateView
+/shop/manage/<slug>/delete/            ProductDeleteView
+/shop/manage-category/…                the same three for Category
+```
+
+Six class-based views over `shop/forms.py`, all behind `StaffRequiredMixin`
+(`LoginRequiredMixin` + `is_staff`), so a signed-out visitor is redirected to
+login and a signed-in shopper gets a 403. They are a convenience surface, not
+a replacement for `/admin/`, which the page links to.
+
+Two details carry the weight:
+
+- **`ProductForm.clean()` fills a blank slug**, rather than leaving it to
+  `Product.save()`. The model's version runs after validation, so a duplicate
+  name would surface as an `IntegrityError` 500 instead of a field error.
+- **`ProtectedDeleteMixin` catches `ProtectedError`.** `OrderItem.product` and
+  `Product.category` are PROTECT, so a sold product and a non-empty category
+  genuinely cannot be deleted; the view says so in a message and redirects
+  instead of raising.
+
+The public `product_list`/`product_detail` stay function-based — their
+filtering does not fit `ListView` without spreading across three hooks.
 
 ### The purchase path
 
@@ -469,6 +502,9 @@ Use a context processor instead.
   `sorted(glob('*.jpg'))` yields `product-1, product-10, product-11, …`, not
   numeric order. Pairing by index once mislabelled every product in the shop —
   a duffel bag that was a t-shirt. `shop/tests.py` guards this.
+- **Retiring beats deleting.** `is_active=False` takes a product out of the
+  shop while leaving order history readable; PROTECT makes that the only
+  option for anything already sold, and the delete view says so.
 - **A filter that cannot be satisfied is not offered.** The size and colour
   facets list only values a live product carries, so the sidebar never
   advertises a filter that returns nothing.
@@ -480,11 +516,13 @@ Use a context processor instead.
 ### Verified working
 
 `manage.py check` → no issues. 0 unapplied migrations, 0 pending model changes.
-83 tests pass. Route sweep: `/`, `/about/`, `/contact/`, `/shop/`,
+95 tests pass. Route sweep: `/`, `/about/`, `/contact/`, `/shop/`,
 `/shop/<slug>/`, `/cart/`, `/accounts/login/`, `/accounts/signup/` → **200**;
 `/orders/`, `/accounts/profile/`, `/admin/` → **302** to login (correct —
-login-gated). Listing, facet filtering and the product gallery confirmed in
-Chrome, not just by test client.
+login-gated); `/shop/manage/` → **403** for a signed-in non-staff user.
+Listing, facet filtering and the product gallery confirmed in Chrome, not just
+by test client. The staff form was driven end to end in Chrome as well —
+CKEditor loads, and an edit saved and read back correctly.
 
 ### Demo data (`db.sqlite3`, gitignored)
 
@@ -506,11 +544,11 @@ nothing with `migrate` then `seed`; `seed` is idempotent and safe to re-run.
 
 ### Testing
 
-`python manage.py test` runs **83 tests** in under 2 seconds:
+`python manage.py test` runs **95 tests** in under 3 seconds:
 
 | App | Tests | Covers |
 |---|---|---|
-| `shop` | 23 | listing, search, price bounds, size/colour facets, detail access, seed integrity |
+| `shop` | 35 | listing, search, price bounds, size/colour facets, detail access, seed integrity, staff CRUD access + PROTECT |
 | `orders` | 24 | checkout, stock timing, totals, coupons, phone normalisation, order ownership |
 | `payments` | 14 | phone parsing, STK push, callback idempotency, token rejection |
 | `accounts` | 10 | profile signal, one-default-address rule, cross-user access |
