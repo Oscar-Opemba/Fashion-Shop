@@ -4,6 +4,10 @@ An online store built on Django 6, using the
 [MaleFashion](https://themewagon.com/themes/free-bootstrap-4-html5-ecommerce-website-template-malefashion/)
 ThemeWagon template as its front end.
 
+New to the project? **[MODULE.md](MODULE.md)** walks through it from an empty
+folder to a working shop. **[ARCHITECTURE.md](ARCHITECTURE.md)** is the
+reference for how it all fits together.
+
 ## Quick start
 
 ```bash

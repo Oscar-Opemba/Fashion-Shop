@@ -581,3 +581,67 @@
     vertical-align: middle;
     border: 1px solid #e5e5e5;
 }
+
+
+/* ---------- Staff catalogue management ---------- */
+/* The theme has no table style at all — these pages are the only ones that
+   need one, so it lives here rather than in style.css. */
+
+.manage__table {
+    width: 100%;
+    margin-bottom: 40px;
+    border-collapse: collapse;
+}
+
+.manage__table th,
+.manage__table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 14px;
+    color: #111111;
+    text-align: left;
+}
+
+.manage__table th {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+.manage__table td a {
+    color: #111111;
+    margin-right: 12px;
+}
+
+.manage__table td a:hover { color: #e53637; }
+
+.manage__search {
+    margin-bottom: 24px;
+}
+
+.manage__search input {
+    height: 46px;
+    width: 260px;
+    border: 1px solid #e5e5e5;
+    padding-left: 15px;
+    font-size: 14px;
+    margin-right: 8px;
+}
+
+/* The size/colour checkbox lists render as a plain <ul>; lay them out inline
+   so eight sizes do not become eight rows. */
+.checkout__input ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+}
+
+.checkout__input ul li {
+    display: inline-block;
+    margin-right: 16px;
+    font-size: 14px;
+    color: #111111;
+}
+
+.checkout__input ul li input { margin-right: 6px; }

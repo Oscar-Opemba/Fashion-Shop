@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage catalogue{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Manage catalogue' %}
+        {% include 'includes/breadcrumb.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="checkout spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <h4>Products</h4>
+                <p>
+                    <a href="{% url 'shop:product_create' %}" class="site-btn">Add product</a>
+                    <a href="{% url 'shop:category_create' %}" class="link-button">Add category</a>
+                    <a href="/admin/shop/" class="link-button">Full admin</a>
+                </p>
+
+                <form method="get" class="manage__search">
+                    <input type="text" name="q" value="{{ query }}" placeholder="Search by name">
+                    <button type="submit" class="site-btn">Search</button>
+                    {% if query %}<a href="{% url 'shop:manage_list' %}" class="link-button">Clear</a>{% endif %}
+                </form>
+
+                <table class="manage__table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Live</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.category.name }}</td>
+                                <td>KES {{ product.price|floatformat:2 }}</td>
+                                <td>{{ product.stock }}</td>
+                                <td>{% if product.is_active %}Yes{% else %}No{% endif %}</td>
+                                <td>
+                                    {% if product.is_active %}
+                                        <a href="{{ product.get_absolute_url }}">View</a>
+                                    {% endif %}
+                                    <a href="{% url 'shop:product_update' slug=product.slug %}">Edit</a>
+                                    <a href="{% url 'shop:product_delete' slug=product.slug %}">Delete</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6">No products{% if query %} matching &ldquo;{{ query }}&rdquo;{% endif %}.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if page_obj.paginator.num_pages > 1 %}
+                    <div class="product__pagination">
+                        {% if page_obj.has_previous %}
+                            <a href="?q={{ query }}&page={{ page_obj.previous_page_number }}"><i class="fa fa-angle-left"></i></a>
+                        {% endif %}
+                        {% for num in page_obj.paginator.page_range %}
+                            <a {% if num == page_obj.number %}class="active" {% endif %}href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+                        {% endfor %}
+                        {% if page_obj.has_next %}
+                            <a href="?q={{ query }}&page={{ page_obj.next_page_number }}"><i class="fa fa-angle-right"></i></a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <h4>Categories</h4>
+                <table class="manage__table">
+                    <thead>
+                        <tr><th>Name</th><th>Products</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for category in categories %}
+                            <tr>
+                                <td>{{ category.name }}</td>
+                                <td>{{ category.product_count }}</td>
+                                <td>
+                                    <a href="{% url 'shop:category_update' slug=category.slug %}">Edit</a>
+                                    <a href="{% url 'shop:category_delete' slug=category.slug %}">Delete</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3">No categories yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}{{ form.media.css }}{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title=title crumb_parent='Manage catalogue' crumb_parent_url='/shop/manage/' %}
+        {% include 'includes/breadcrumb.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="checkout spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="checkout__form">
+                    <h4>{{ title }}</h4>
+                    {# enctype matters: the image field posts a file. #}
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                            {% for error in form.non_field_errors %}
+                                <small class="form-error">{{ error }}</small>
+                            {% endfor %}
+                        {% endif %}
+                        {% for field in form %}
+                            <div class="checkout__input{% if field.field.widget.input_type == 'checkbox' and not field.field.widget.allow_multiple_selected %} checkout__input--check{% endif %}">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <small class="form-hint">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <small class="form-error">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="site-btn">Save</button>
+                        <a href="{% url 'shop:manage_list' %}" class="link-button">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}{{ form.media.js }}{% endblock %}

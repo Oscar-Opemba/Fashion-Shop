@@ -1,7 +1,12 @@
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
-from django.shortcuts import get_object_or_404, render
+from django.db.models import Count, ProtectedError, Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
+from .forms import CategoryForm, ProductForm
 from .models import Category, Colour, Product, Size
 
 PAGE_SIZE = 12
@@ -155,3 +160,139 @@ def product_detail(request, slug):
             category=product.category, is_active=True
         ).exclude(pk=product.pk)[:4],
     })
+
+
+# ---------------------------------------------------------------------------
+# Staff catalogue management — the CRUD half.
+#
+# `product_list` and `product_detail` above are the public Read side and stay
+# function-based: their filtering does not fit a ListView's get_queryset
+# without spreading across three hooks. Everything below is a class-based
+# view, since Create/Update/Delete are exactly the shapes Django ships.
+#
+# This is a convenience surface, not a replacement for /admin/ — it is gated
+# to staff and reuses the same model forms.
+# ---------------------------------------------------------------------------
+
+
+class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Signed in *and* staff. Anonymous users are sent to log in; a signed-in
+    shopper who guesses a manage url gets a 403 rather than a login loop."""
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+
+class ProtectedDeleteMixin:
+    """Turn a PROTECT violation into a message instead of a 500.
+
+    `OrderItem.product` and `Product.category` are PROTECT, so anything that
+    has been sold — or any category still holding products — cannot be
+    deleted. That is the intended answer, not an error page.
+    """
+
+    protected_message = 'Cannot delete this — other records still reference it.'
+    success_message = 'Deleted.'
+
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+        except ProtectedError:
+            messages.error(self.request, self.protected_message)
+            return redirect(self.get_success_url())
+        messages.success(self.request, self.success_message)
+        return response
+
+
+class ProductManageList(StaffRequiredMixin, ListView):
+    """Read, staff flavour — includes the inactive rows the shop hides."""
+
+    model = Product
+    template_name = 'shop/manage_list.html'
+    context_object_name = 'products'
+    paginate_by = 20
+
+    def get_queryset(self):
+        products = Product.objects.select_related('category')
+        query = self.request.GET.get('q', '').strip()
+        if query:
+            products = products.filter(name__icontains=query)
+        return products
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['query'] = self.request.GET.get('q', '').strip()
+        context['categories'] = Category.objects.annotate(
+            product_count=Count('products')
+        )
+        return context
+
+
+class ProductCreateView(StaffRequiredMixin, CreateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'shop/product_form.html'
+    success_url = reverse_lazy('shop:manage_list')
+    extra_context = {'title': 'Add product'}
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Product created.')
+        return super().form_valid(form)
+
+
+class ProductUpdateView(StaffRequiredMixin, UpdateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'shop/product_form.html'
+    success_url = reverse_lazy('shop:manage_list')
+    extra_context = {'title': 'Edit product'}
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Product updated.')
+        return super().form_valid(form)
+
+
+class ProductDeleteView(ProtectedDeleteMixin, StaffRequiredMixin, DeleteView):
+    model = Product
+    template_name = 'shop/product_confirm_delete.html'
+    success_url = reverse_lazy('shop:manage_list')
+    success_message = 'Product deleted.'
+    protected_message = (
+        'That product appears in an order, so it cannot be deleted. '
+        'Untick "is active" to retire it instead.'
+    )
+
+
+class CategoryCreateView(StaffRequiredMixin, CreateView):
+    model = Category
+    form_class = CategoryForm
+    template_name = 'shop/product_form.html'
+    success_url = reverse_lazy('shop:manage_list')
+    extra_context = {'title': 'Add category'}
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Category created.')
+        return super().form_valid(form)
+
+
+class CategoryUpdateView(StaffRequiredMixin, UpdateView):
+    model = Category
+    form_class = CategoryForm
+    template_name = 'shop/product_form.html'
+    success_url = reverse_lazy('shop:manage_list')
+    extra_context = {'title': 'Edit category'}
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Category updated.')
+        return super().form_valid(form)
+
+
+class CategoryDeleteView(ProtectedDeleteMixin, StaffRequiredMixin, DeleteView):
+    model = Category
+    template_name = 'shop/category_confirm_delete.html'
+    success_url = reverse_lazy('shop:manage_list')
+    success_message = 'Category deleted.'
+    protected_message = (
+        'That category still holds products, so it cannot be deleted. '
+        'Move them to another category first.'
+    )

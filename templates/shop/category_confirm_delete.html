@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete {{ category.name }}{% endblock %}
+
+{% block content %}
+<section class="checkout spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-9">
+                <div class="checkout__form">
+                    <h4>Delete this category?</h4>
+                    <p>{{ category.name }} &middot; {{ category.products.count }} product{{ category.products.count|pluralize }}</p>
+                    <p>A category that still holds products cannot be deleted —
+                        move them elsewhere first.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="site-btn">Yes, delete</button>
+                        <a href="{% url 'shop:manage_list' %}" class="link-button">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

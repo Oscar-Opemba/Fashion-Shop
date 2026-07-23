@@ -2,11 +2,15 @@ from decimal import Decimal
 from pathlib import Path
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .management.commands.seed import COLOURS, PRODUCTS, SIZES
 from .models import Category, Colour, Product, Size
+
+# Imported to prove the PROTECT on OrderItem.product surfaces as a message.
+from orders.models import Order, OrderItem
 
 
 @override_settings(ALLOWED_HOSTS=['testserver'])
@@ -219,3 +223,160 @@ class SeedDataTests(TestCase):
                 self.assertTrue(
                     (img_root / rel_path).exists(), f'{spec["name"]}: {rel_path}'
                 )
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class ProductCrudTests(TestCase):
+    """The staff-only Create/Update/Delete views in shop/views.py."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff = User.objects.create_user(
+            'keeper', 'keeper@example.com', 'pw', is_staff=True
+        )
+        cls.shopper = User.objects.create_user(
+            'shopper', 'shopper@example.com', 'pw'
+        )
+        cls.category = Category.objects.create(name='Jackets')
+        cls.product = Product.objects.create(
+            category=cls.category, name='Denim Jacket',
+            price=Decimal('4500'), stock=3,
+        )
+
+    def form_data(self, **overrides):
+        data = {
+            'name': 'Leather Jacket',
+            'slug': '',
+            'description': 'Full grain.',
+            'price': '9000',
+            'category': self.category.pk,
+            'sizes': [],
+            'colours': [],
+            'stock': '2',
+            'is_active': 'on',
+        }
+        data.update(overrides)
+        return data
+
+    # -- access -------------------------------------------------------------
+
+    def test_anonymous_is_sent_to_login(self):
+        for name, kwargs in (
+            ('shop:manage_list', {}),
+            ('shop:product_create', {}),
+            ('shop:product_update', {'slug': self.product.slug}),
+            ('shop:product_delete', {'slug': self.product.slug}),
+        ):
+            response = self.client.get(reverse(name, kwargs=kwargs))
+            self.assertEqual(response.status_code, 302, name)
+            self.assertIn('/accounts/login/', response.url, name)
+
+    def test_signed_in_shopper_is_forbidden(self):
+        self.client.force_login(self.shopper)
+        response = self.client.get(reverse('shop:product_create'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_shopper_cannot_delete_by_posting(self):
+        self.client.force_login(self.shopper)
+        response = self.client.post(
+            reverse('shop:product_delete', kwargs={'slug': self.product.slug})
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Product.objects.filter(pk=self.product.pk).exists())
+
+    # -- read ---------------------------------------------------------------
+
+    def test_manage_list_shows_inactive_products(self):
+        hidden = Product.objects.create(
+            category=self.category, name='Retired Parka',
+            price=Decimal('7000'), stock=0, is_active=False,
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse('shop:manage_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, hidden.name)
+        # ...unlike the public listing.
+        self.assertNotContains(
+            self.client.get(reverse('shop:product_list')), hidden.name
+        )
+
+    # -- create -------------------------------------------------------------
+
+    def test_staff_can_create_a_product(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse('shop:product_create'), self.form_data(), follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        created = Product.objects.get(name='Leather Jacket')
+        self.assertEqual(created.slug, 'leather-jacket')
+        self.assertEqual(created.price, Decimal('9000'))
+
+    def test_duplicate_slug_is_a_form_error_not_a_crash(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse('shop:product_create'), self.form_data(name='Denim Jacket')
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context['form'], 'slug',
+            'Product with this Slug already exists.',
+        )
+        self.assertEqual(Product.objects.filter(name='Denim Jacket').count(), 1)
+
+    # -- update -------------------------------------------------------------
+
+    def test_staff_can_update_a_product(self):
+        self.client.force_login(self.staff)
+        self.client.post(
+            reverse('shop:product_update', kwargs={'slug': self.product.slug}),
+            self.form_data(name='Denim Jacket', slug=self.product.slug, stock='11'),
+        )
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 11)
+
+    # -- delete -------------------------------------------------------------
+
+    def test_staff_can_delete_an_unsold_product(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse('shop:product_delete', kwargs={'slug': self.product.slug}),
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Product.objects.filter(pk=self.product.pk).exists())
+
+    def test_deleting_a_sold_product_is_refused_not_a_500(self):
+        order = Order.objects.create(
+            full_name='Wanjiru', phone='0712345678', email='w@example.com',
+            county='Nairobi', town='Nairobi', street='Ngong Rd',
+        )
+        OrderItem.objects.create(
+            order=order, product=self.product, price=self.product.price, quantity=1
+        )
+
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse('shop:product_delete', kwargs={'slug': self.product.slug}),
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Product.objects.filter(pk=self.product.pk).exists())
+        self.assertContains(response, 'appears in an order')
+
+    def test_deleting_a_category_with_products_is_refused(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse('shop:category_delete', kwargs={'slug': self.category.slug}),
+            follow=True,
+        )
+        self.assertTrue(Category.objects.filter(pk=self.category.pk).exists())
+        self.assertContains(response, 'still holds products')
+
+    def test_staff_can_delete_an_empty_category(self):
+        empty = Category.objects.create(name='Hats')
+        self.client.force_login(self.staff)
+        self.client.post(
+            reverse('shop:category_delete', kwargs={'slug': empty.slug}), follow=True
+        )
+        self.assertFalse(Category.objects.filter(pk=empty.pk).exists())
