@@ -40,28 +40,31 @@ CATEGORIES = [
     ('Accessories', 'Watches, belts and the small stuff.'),
 ]
 
+# Each row names the photo it belongs to. The theme ships 14 product shots
+# and every name here describes what is actually in that shot — pairing them
+# by list position instead silently mislabels the whole shop, because
+# sorted() orders the files product-1, product-10, product-11, ... not
+# product-1, product-2, product-3.
 PRODUCTS = [
-    ('Jackets', 'Pique Biker Jacket', 6750),
-    ('Jackets', 'Bomber Jacket', 8200),
-    ('Jackets', 'Quilted Puffer Coat', 11500),
-    ('Jackets', 'Denim Trucker Jacket', 5400),
-    ('Shirts', 'Oxford Button-Down Shirt', 2950),
-    ('Shirts', 'Linen Summer Shirt', 3400),
-    ('Shirts', 'Flannel Check Shirt', 3100),
-    ('Shirts', 'Slim Fit Poplin Shirt', 2750),
-    ('Bags', 'Multi-pocket Chest Bag', 4300),
-    ('Bags', 'Canvas Weekend Duffel', 7900),
-    ('Bags', 'Leather Laptop Satchel', 9600),
-    ('Bags', 'Everyday Backpack', 5200),
-    ('Shoes', 'Retro Court Sneakers', 6800),
-    ('Shoes', 'Chelsea Ankle Boots', 10400),
-    ('Shoes', 'Canvas Low Tops', 3600),
-    ('Shoes', 'Suede Desert Boots', 8900),
-    ('Accessories', 'Minimal Field Watch', 12500),
-    ('Accessories', 'Woven Leather Belt', 2400),
-    ('Accessories', 'Wool Beanie', 1500),
-    ('Accessories', 'Polarised Sunglasses', 4100),
+    ('Shoes', 'Navy Suede Runner Sneakers', 6800, 'product-1.jpg'),
+    ('Jackets', 'Camel Cotton Chore Jacket', 6750, 'product-2.jpg'),
+    ('Shoes', 'Navy Leather Low-Top Sneakers', 5400, 'product-3.jpg'),
+    ('Jackets', 'Brown Suede Hooded Overshirt', 7900, 'product-4.jpg'),
+    ('Shirts', 'Black Graphic Print T-Shirt', 2400, 'product-5.jpg'),
+    ('Accessories', 'Grey Wool Fringed Scarf', 2950, 'product-6.jpg'),
+    ('Bags', 'Brown Leather Backpack', 9600, 'product-7.jpg'),
+    ('Shirts', 'Navy Tipped Polo Shirt', 3100, 'product-8.jpg'),
+    ('Shirts', 'Black Floral Print T-Shirt', 2750, 'product-9.jpg'),
+    ('Accessories', 'Eau de Parfum Gift Set', 8200, 'product-10.jpg'),
+    ('Bags', 'White Travel Backpack', 11500, 'product-11.jpg'),
+    ('Jackets', 'Green Camo Hooded Anorak', 8900, 'product-12.jpg'),
+    ('Bags', 'Brown Leather Briefcase', 10400, 'product-13.jpg'),
+    ('Accessories', 'Gold Rectangular Cufflinks', 4100, 'product-14.jpg'),
 ]
+
+# Two rows are seeded empty so the sold-out badge and the disabled add-to-cart
+# path are both visible without editing anything by hand.
+OUT_OF_STOCK = {'Navy Leather Low-Top Sneakers', 'Brown Leather Briefcase'}
 
 DESCRIPTION = (
     '<p>A well-made everyday piece, cut for a clean fit and built to last '
@@ -90,19 +93,27 @@ class Command(BaseCommand):
             self.stdout.write('Cleared existing shop data.')
 
         image_dir = Path(settings.BASE_DIR) / 'static' / 'img' / 'product'
-        images = sorted(image_dir.glob('*.jpg'))
+        images = {path.name: path for path in image_dir.glob('*.jpg')}
         if not images:
             self.stdout.write(self.style.WARNING(
                 f'No theme images found in {image_dir}; products will have no photos.'
             ))
 
+        # One representative photo per category, picked from that category's own
+        # products so the home page tiles match what they link to.
+        CATEGORY_IMAGES = {
+            'Jackets': 'product-2.jpg',
+            'Shirts': 'product-8.jpg',
+            'Bags': 'product-7.jpg',
+            'Shoes': 'product-1.jpg',
+            'Accessories': 'product-14.jpg',
+        }
+
         categories = {}
-        for index, (name, _) in enumerate(CATEGORIES):
+        for name, _ in CATEGORIES:
             category, created = Category.objects.get_or_create(name=name)
-            # Give each category a distinct tile image, otherwise the home page
-            # shows the same fallback photo three times over.
-            if images and needs_image(category.image):
-                source = images[(index * 3) % len(images)]
+            source = images.get(CATEGORY_IMAGES[name])
+            if source is not None and needs_image(category.image):
                 with source.open('rb') as fh:
                     category.image.save(f'category-{source.name}', File(fh), save=True)
             categories[name] = category
@@ -110,15 +121,16 @@ class Command(BaseCommand):
 
         created = 0
         repaired = 0
-        for index, (category_name, name, price) in enumerate(PRODUCTS):
+        for category_name, name, price, image_name in PRODUCTS:
+            source = images.get(image_name)
+
             existing = Product.objects.filter(name=name).first()
             if existing is not None:
                 # Already seeded, but the photo may have gone missing with
                 # media/. Re-attach it rather than skipping the row entirely.
-                if images and needs_image(existing.image):
-                    source = images[index % len(images)]
+                if source is not None and needs_image(existing.image):
                     with source.open('rb') as fh:
-                        existing.image.save(source.name, File(fh), save=True)
+                        existing.image.save(image_name, File(fh), save=True)
                     repaired += 1
                 continue
 
@@ -126,15 +138,13 @@ class Command(BaseCommand):
                 category=categories[category_name],
                 name=name,
                 price=price,
-                # A couple of out-of-stock items make that path visible.
-                stock=0 if index % 9 == 4 else random.randint(3, 40),
+                stock=0 if name in OUT_OF_STOCK else random.randint(3, 40),
                 description=DESCRIPTION,
             )
 
-            if images:
-                source = images[index % len(images)]
+            if source is not None:
                 with source.open('rb') as fh:
-                    product.image.save(source.name, File(fh), save=False)
+                    product.image.save(image_name, File(fh), save=False)
 
             product.save()
             created += 1
