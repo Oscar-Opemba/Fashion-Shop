@@ -60,6 +60,15 @@ PRODUCTS = [
     ('Jackets', 'Green Camo Hooded Anorak', 8900, 'product-12.jpg'),
     ('Bags', 'Brown Leather Briefcase', 10400, 'product-13.jpg'),
     ('Accessories', 'Gold Rectangular Cufflinks', 4100, 'product-14.jpg'),
+    # product-15 to product-20 are squared-off crops of photos the theme
+    # ships elsewhere (banners, instagram strip, shop-details hero, sale
+    # badge). The original product/ folder only held 14 shots.
+    ('Jackets', 'Grey Sleeve Varsity Bomber', 9800, 'product-15.jpg'),
+    ('Accessories', 'Round Tortoiseshell Sunglasses', 4100, 'product-16.jpg'),
+    ('Shoes', 'Two-Tone Leather Low-Tops', 7200, 'product-17.jpg'),
+    ('Bags', 'Olive Canvas Weekend Duffel', 7900, 'product-18.jpg'),
+    ('Shirts', 'Camel Crew Sweatshirt', 4600, 'product-19.jpg'),
+    ('Bags', 'Rust Drawstring Bucket Bag', 5300, 'product-20.jpg'),
 ]
 
 # Two rows are seeded empty so the sold-out badge and the disabled add-to-cart
