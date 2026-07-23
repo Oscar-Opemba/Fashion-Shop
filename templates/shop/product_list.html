@@ -60,48 +60,45 @@
                                     </div>
                                 </div>
                             </div>
-                            {% comment %}Size and colour are presentation only:
-                            products carry no variants yet, so these controls are
-                            inert by design.{% endcomment %}
-                            <div class="card">
-                                <div class="card-heading">
-                                    <a data-toggle="collapse" data-target="#collapseFour">Size</a>
-                                </div>
-                                <div id="collapseFour" class="collapse show" data-parent="#accordionExample">
-                                    <div class="card-body">
-                                        <div class="shop__sidebar__size">
-                                            <label for="xs">xs<input type="radio" name="size" id="xs"></label>
-                                            <label for="sm">s<input type="radio" name="size" id="sm"></label>
-                                            <label for="md">m<input type="radio" name="size" id="md"></label>
-                                            <label for="lg">l<input type="radio" name="size" id="lg"></label>
-                                            <label for="xl">xl<input type="radio" name="size" id="xl"></label>
-                                            <label for="xxl">xxl<input type="radio" name="size" id="xxl"></label>
-                                            <label for="3xl">3xl<input type="radio" name="size" id="3xl"></label>
-                                            <label for="4xl">4xl<input type="radio" name="size" id="4xl"></label>
+                            {% if size_links %}
+                                <div class="card">
+                                    <div class="card-heading">
+                                        <a data-toggle="collapse" data-target="#collapseFour">Size</a>
+                                    </div>
+                                    <div id="collapseFour" class="collapse show" data-parent="#accordionExample">
+                                        <div class="card-body">
+                                            <div class="shop__sidebar__size">
+                                                {% for link in size_links %}
+                                                    <a href="?{{ link.query }}"
+                                                       class="size-filter{% if link.active %} size-filter--active{% endif %}"
+                                                       {% if link.active %}aria-current="true"{% endif %}>{{ link.option.name }}</a>
+                                                {% endfor %}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="card">
-                                <div class="card-heading">
-                                    <a data-toggle="collapse" data-target="#collapseFive">Colors</a>
-                                </div>
-                                <div id="collapseFive" class="collapse show" data-parent="#accordionExample">
-                                    <div class="card-body">
-                                        <div class="shop__sidebar__color">
-                                            <label class="c-1" for="sp-1"><input type="radio" name="colour" id="sp-1"></label>
-                                            <label class="c-2" for="sp-2"><input type="radio" name="colour" id="sp-2"></label>
-                                            <label class="c-3" for="sp-3"><input type="radio" name="colour" id="sp-3"></label>
-                                            <label class="c-4" for="sp-4"><input type="radio" name="colour" id="sp-4"></label>
-                                            <label class="c-5" for="sp-5"><input type="radio" name="colour" id="sp-5"></label>
-                                            <label class="c-6" for="sp-6"><input type="radio" name="colour" id="sp-6"></label>
-                                            <label class="c-7" for="sp-7"><input type="radio" name="colour" id="sp-7"></label>
-                                            <label class="c-8" for="sp-8"><input type="radio" name="colour" id="sp-8"></label>
-                                            <label class="c-9" for="sp-9"><input type="radio" name="colour" id="sp-9"></label>
+                            {% endif %}
+                            {% if colour_links %}
+                                <div class="card">
+                                    <div class="card-heading">
+                                        <a data-toggle="collapse" data-target="#collapseFive">Colors</a>
+                                    </div>
+                                    <div id="collapseFive" class="collapse show" data-parent="#accordionExample">
+                                        <div class="card-body">
+                                            <div class="shop__sidebar__color">
+                                                {% for link in colour_links %}
+                                                    <a href="?{{ link.query }}"
+                                                       class="colour-filter{% if link.active %} colour-filter--active{% endif %}"
+                                                       style="background: {{ link.option.hex_value }}"
+                                                       title="{{ link.option.name }}"
+                                                       aria-label="Filter by {{ link.option.name }}"
+                                                       {% if link.active %}aria-current="true"{% endif %}></a>
+                                                {% endfor %}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            {% endif %}
                             {% if categories %}
                                 <div class="card">
                                     <div class="card-heading">

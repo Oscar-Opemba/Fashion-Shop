@@ -505,3 +505,79 @@
        where it is a permanent column, not a collapsible panel. */
     .shop__sidebar.collapse:not(.show) { display: block !important; }
 }
+
+/* ---------- Size and colour facets ---------- */
+/* The theme shipped these as <label>s wrapping hidden radios, which could not
+   navigate. They are links now, so the label styling is restated for anchors
+   and an active state is added — the theme only had one for size. */
+
+.shop__sidebar__size .size-filter {
+    color: #111111;
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+    border: 1px solid #e5e5e5;
+    padding: 6px 25px;
+    margin-bottom: 10px;
+    margin-right: 5px;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+
+.shop__sidebar__size .size-filter:hover { border-color: #111111; }
+
+.shop__sidebar__size .size-filter--active {
+    background: #111111;
+    color: #ffffff;
+    border-color: #111111;
+}
+
+.shop__sidebar__color .colour-filter {
+    height: 30px;
+    width: 30px;
+    border-radius: 50%;
+    position: relative;
+    margin-right: 10px;
+    display: inline-block;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border: 1px solid #e5e5e5;
+}
+
+/* A ring rather than a fill, so the swatch's own colour stays readable. */
+.shop__sidebar__color .colour-filter--active {
+    box-shadow: 0 0 0 2px #ffffff inset, 0 0 0 2px #111111;
+}
+
+.shop__sidebar__color .colour-filter:focus-visible,
+.shop__sidebar__size .size-filter:focus-visible {
+    outline: 2px solid #111111;
+    outline-offset: 2px;
+}
+
+/* ---------- Detail page options ---------- */
+/* Read-only on the detail page: stock is held per product, not per size or
+   colour, so these say what is offered without implying a selectable variant. */
+
+.product__details__option__size .option-chip {
+    color: #111111;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+    border: 1px solid #e5e5e5;
+    padding: 4px 16px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.product__details__option__color .option-swatch {
+    height: 26px;
+    width: 26px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+    border: 1px solid #e5e5e5;
+}

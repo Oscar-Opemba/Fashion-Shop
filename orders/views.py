@@ -7,7 +7,6 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from cart.cart import Cart
-from shop.models import Product
 
 from .forms import CouponApplyForm, OrderCreateForm
 from .models import Order, OrderItem
@@ -59,13 +58,9 @@ def checkout(request):
                     for item in cart
                 ])
 
-                # The order is the commitment, so the stock goes with it.
-                for item in cart:
-                    product = Product.objects.select_for_update().get(
-                        pk=item['product'].pk
-                    )
-                    product.stock = max(0, product.stock - item['quantity'])
-                    product.save(update_fields=['stock'])
+            # Stock is NOT taken here. It comes off when M-Pesa confirms,
+            # guarded by order.stock_applied, so an abandoned STK prompt does
+            # not hold inventory and a replayed callback cannot double-count.
 
             if not order.user_id:
                 # A guest's claim on an order is recorded here, at the only
@@ -76,10 +71,9 @@ def checkout(request):
                 owned.append(order.pk)
                 request.session['guest_orders'] = owned[-20:]
 
-            cart.clear()
-            request.session.pop(COUPON_SESSION_ID, None)
-
-            return redirect('orders:placed', order_id=order.pk)
+            # The cart is kept until payment succeeds, so a failed or
+            # cancelled STK prompt leaves the shopper somewhere to retry from.
+            return redirect('payments:start', order_id=order.pk)
     else:
         form = OrderCreateForm(initial=_prefill(request))
 
@@ -99,18 +93,6 @@ def checkout(request):
         'discount': discount,
         'total': subtotal - discount,
     })
-
-
-def order_placed(request, order_id):
-    """Confirmation page, reachable by the guest who placed the order too."""
-    order = get_object_or_404(
-        Order.objects.prefetch_related('items__product'), pk=order_id
-    )
-
-    if not _owns_order(request, order):
-        raise Http404
-
-    return render(request, 'orders/placed.html', {'order': order})
 
 
 def _owns_order(request, order):

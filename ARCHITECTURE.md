@@ -1,12 +1,12 @@
 # Architecture
 
 A Django storefront built on the MaleFashion HTML theme. Django 6.0.7, SQLite,
-session-based cart, guest checkout, no online payment — an order is placed and
-settled with the customer off-site.
+session-based cart, guest checkout, and M-Pesa payment through Safaricom's
+Daraja API (STK Push).
 
 - **~2,000 lines** of Python (excluding migrations and the virtualenv)
 - **2,020 lines** across 31 templates
-- **5 apps**, 10 models, 105 static files, 25 uploaded media files
+- **6 apps**, 11 models, 111 static files, 31 uploaded media files
 
 ---
 
@@ -185,8 +185,10 @@ at deploy time, gitignored.
 | Model | Key fields | Notes |
 |---|---|---|
 | `Category` | `name` (unique), `slug` (auto), `image` | 5 rows |
-| `Product` | `category` FK **PROTECT**, `name`, `slug`, `price` Decimal(10,2), `stock`, `image`, `is_active`, `created` | 20 rows; DB indexes on `slug` and `-created` |
-| `ProductImage` | `product` FK CASCADE, `image`, `alt` | gallery; **0 rows** |
+| `Product` | `category` FK **PROTECT**, `name`, `slug`, `price` Decimal(10,2), `stock`, `image`, `is_active`, `created`, M2M `sizes`/`colours` | 20 rows; DB indexes on `slug` and `-created` |
+| `ProductImage` | `product` FK CASCADE, `image`, `alt` | gallery; 3 rows (Camel Crew Sweatshirt) |
+| `Size` | `name` (unique), `slug` (auto), `position` | 8 rows, XS-4XL; `position` drives sidebar order |
+| `Colour` | `name` (unique), `slug` (auto), `hex_value` | 10 rows; rendered as an inline background |
 | `Review` | `product` FK, `user` FK, `rating` (choices), `comment` | UniqueConstraint(user, product); **0 rows** |
 | `WishlistItem` | `user` FK, `product` FK, `added` | UniqueConstraint(user, product); **0 rows** |
 
@@ -252,6 +254,7 @@ or `env_list('X')`. Do not add decouple; it would duplicate the job.
 /shop/          shop.urls
 /cart/          cart.urls
 /orders/        orders.urls
+/payments/      payments.urls
 /ckeditor5/     django_ckeditor_5.urls
 /               core.urls        ← LAST: it is a catch-all prefix
 + media served by staticfiles when DEBUG
@@ -275,15 +278,26 @@ add to cart       POST /cart/add/<id>/        cart.cart_add        (AJAX)
 review cart       /cart/                      cart.cart_detail
                   POST /orders/coupon/apply/  orders.coupon_apply  (session)
 checkout          /orders/checkout/           orders.checkout
-                  → creates Order + OrderItem rows (price snapshot),
-                    decrements stock, clears cart + coupon
-                    — all inside one @transaction.atomic block
-confirm           /orders/placed/<id>/        orders.order_placed
+                  → creates Order + OrderItem rows (price snapshot)
+                    inside one @transaction.atomic block.
+                    Stock is NOT taken here.
+pay               /payments/start/<id>/       payments.start   → STK push
+                  /payments/waiting/<id>/     payments.waiting
+                  → polls /payments/status/<id>/ every few seconds
+callback          POST /payments/callback/<token>/  payments.callback
+                  → Safaricom; marks paid, takes stock under
+                    Order.stock_applied, clears cart + coupon
+confirm           /payments/success/<id>/     payments.success
+                  /payments/failed/<id>/      payments.failed
 ```
+
+Stock moves at the callback, not at checkout, so an abandoned STK prompt holds
+no inventory and a replayed callback cannot take the same stock twice.
 
 ### Who may read an order
 
-`orders/views.py:_owns_order()` is the single gate. A member's order is matched
+`orders/views.py:_owns_order()` is the single gate, imported by `payments`
+rather than duplicated there. A member's order is matched
 on `user_id`; a guest's on a list of order ids written into their session by
 `checkout()` at the moment the order is created — the only point at which the
 claim is known to be genuine. Anything else would let someone walk order ids
@@ -389,30 +403,27 @@ Route sweep: `/`, `/about/`, `/contact/`, `/shop/`, `/shop/<slug>/`, `/cart/`,
 
 | Gap | Impact |
 |---|---|
-| `Review` = 0 rows | `avg_rating` annotation is `None`; star ratings render empty |
-| `ProductImage` = 0 rows | product galleries fall back to the single main image |
-| `WishlistItem` = 0 rows | wishlist badge always 0 |
-| No tests in `shop`, `orders`, `accounts`, `core` | only `cart` (49) is covered |
+| Only one product has a gallery | the theme photographed just one item from several angles; the other 19 fall back to their single shot |
+| Size/colour are not variants | stock is per product, so the cart does not record which size was picked |
+| Shoes carry no sizes | they need a numeric run; XS-4XL would be nonsense on a sneaker |
 | JS runtime unverified | files load, but carousel/offcanvas/mixitup init untested in a real browser |
 | `ALLOWED_HOSTS` lacks `testserver` | Django's test client returns 400 unless you pass `Client(SERVER_NAME='localhost')` |
 
-### Uncommitted work
+### Testing
 
-The payment integration was removed and the storefront put back onto the
-template's own light styling:
+`python manage.py test` runs 83 tests across every app:
 
-```
- D payments/                             the whole app, and templates/payments/
- D static/css/theme-dark.css             the dark restyle
- M myproject/settings.py                 INSTALLED_APPS, M-Pesa block dropped
- M myproject/urls.py                     /payments/ mount dropped
- M orders/                               checkout now places the order outright
- M static/css/storefront.css             rewritten in the template's palette
- M templates/                            payment copy and the sticky bars removed
-?? templates/orders/placed.html          order confirmation page
-?? orders/migrations/0002_...py          drops Order.paid / Order.stock_applied
-?? core/forms.py                         ContactForm — never committed
-```
+| App | Covers |
+|---|---|
+| `cart` | session serialisation, stock capping, captured prices |
+| `shop` | listing, search, price bounds, size/colour facets, detail access, seed integrity |
+| `orders` | checkout, stock timing, totals, coupons, phone normalisation, order ownership |
+| `payments` | phone parsing, STK push, callback idempotency, token rejection |
+| `accounts` | profile signal, one-default-address rule, cross-user access |
+| `core` | home page, deal of the week, contact form |
+
+`PASSWORD_HASHERS` drops to MD5 when `test` is in `sys.argv`, which takes the
+suite from ~31s to under 2s.
 
 ---
 

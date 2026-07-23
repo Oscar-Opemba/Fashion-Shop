@@ -24,30 +24,69 @@ password before this goes anywhere real.**
 | App | What it owns |
 |---|---|
 | `core` | Home, about, contact, `base.html` and shared includes |
-| `shop` | `Category`, `Product`, `ProductImage`, `Review`, `WishlistItem` |
+| `shop` | `Category`, `Product`, `ProductImage`, `Size`, `Colour` |
 | `cart` | Session-backed cart — `cart/cart.py` holds the `Cart` class everything reuses |
 | `orders` | `Order`, `OrderItem`, `Coupon`, checkout, order history |
+| `payments` | `MpesaPayment`, the Daraja STK Push client and its callback |
 | `accounts` | `Profile`, `Address`, allauth wiring |
 
 ## How checkout works
 
-There is no online payment. Checkout collects delivery details and places the
-order; it is settled with the customer off-site.
+Payment is M-Pesa via Safaricom's Daraja API (Lipa na M-Pesa Online / STK
+Push). Fill in the `MPESA_*` keys in `.env` — without them checkout still
+works up to the point of payment and then lands on the failure page with the
+reason, so the rest of the site stays usable.
 
 ```
 cart  ->  checkout form (name, phone, county, town, street)
       ->  Order + OrderItem rows created in one transaction
-      ->  stock decremented, cart and coupon cleared
-      ->  orders:placed confirmation page
+      ->  payments:start fires the STK push
+      ->  waiting page polls payments:status
+      ->  Daraja POSTs the result to payments:callback
+      ->  order marked paid, stock taken, cart cleared
 ```
 
 - Line prices are copied from the cart, not re-read from the product, so what
   the shopper agreed to is what the order records.
-- The order starts at status `pending`; move it through `processing`,
-  `shipped` and `delivered` from the admin.
+- **Stock is taken when payment confirms, not at checkout.** An abandoned STK
+  prompt holds no inventory. `Order.stock_applied` guards the decrement, so a
+  callback Safaricom replays cannot take the same stock twice.
+- The cart survives checkout and is cleared only on success, so a cancelled
+  prompt leaves the shopper somewhere to retry from.
+- The order starts at status `pending`; after payment it becomes `paid`, and
+  you move it through `shipped` and `delivered` from the admin.
+- The callback is unauthenticated on Safaricom's side. What protects it is an
+  unguessable url segment (`MPESA_CALLBACK_TOKEN`), lookup strictly by
+  `CheckoutRequestID`, and idempotency — nothing in the body that names an
+  order is trusted.
 - A guest's claim on an order is written into their session at the moment it is
-  created, which is what lets them see the confirmation page without an account
-  and stops anyone else reading it by walking order ids.
+  created, which is what lets them follow the payment without an account and
+  stops anyone else reading it by walking order ids.
+
+Safaricom must reach the callback on a public https url, so in development run
+`ngrok http 8000` and put the forwarding url in `MPESA_CALLBACK_BASE_URL` and
+`CSRF_TRUSTED_ORIGINS`.
+
+## Sizes and colours
+
+`Size` and `Colour` are plain lookup tables joined to `Product` many-to-many.
+They drive the shop sidebar filters (`?size=xl`, `?colour=navy`, and both at
+once) and populate the detail page.
+
+Stock is held on the product, not per size/colour combination, so these narrow
+the listing and say what a piece comes in — they are not a variant-level
+inventory, and the cart does not record which size was picked.
+
+## Tests
+
+```bash
+python manage.py test
+```
+
+Covers the cart, the shop listing and its facets, checkout and order
+ownership, the Daraja client and callback, accounts, and the seed table
+itself. Password hashing drops to MD5 under `manage.py test` so the suite runs
+in seconds.
 
 ## The front end
 

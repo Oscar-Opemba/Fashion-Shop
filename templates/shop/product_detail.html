@@ -73,26 +73,35 @@
 
                         <div class="product__details__desc">{{ product.description|safe }}</div>
 
-                        {% comment %}Size and colour are presentation only: products
-                        carry no variants yet, so these controls are inert by
-                        design.{% endcomment %}
-                        <div class="product__details__option">
-                            <div class="product__details__option__size">
-                                <span>Size:</span>
-                                <label for="xxl">xxl<input type="radio" name="size" id="xxl"></label>
-                                <label class="active" for="xl">xl<input type="radio" name="size" id="xl"></label>
-                                <label for="l">l<input type="radio" name="size" id="l"></label>
-                                <label for="sm">s<input type="radio" name="size" id="sm"></label>
+                        {% comment %}Stock is held on the product rather than per
+                        size/colour, so these state what the piece comes in and
+                        link back into the filtered listing — they are not a
+                        variant picker.{% endcomment %}
+                        {% if product.sizes.all or product.colours.all %}
+                            <div class="product__details__option">
+                                {% if product.sizes.all %}
+                                    <div class="product__details__option__size">
+                                        <span>Size:</span>
+                                        {% for size in product.sizes.all %}
+                                            <a class="option-chip"
+                                               href="{% url 'shop:product_list' %}?size={{ size.slug }}">{{ size.name }}</a>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                {% if product.colours.all %}
+                                    <div class="product__details__option__color">
+                                        <span>Color:</span>
+                                        {% for colour in product.colours.all %}
+                                            <a class="option-swatch"
+                                               style="background: {{ colour.hex_value }}"
+                                               title="{{ colour.name }}"
+                                               aria-label="{{ colour.name }}"
+                                               href="{% url 'shop:product_list' %}?colour={{ colour.slug }}"></a>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
-                            <div class="product__details__option__color">
-                                <span>Color:</span>
-                                <label class="c-1" for="sp-1"><input type="radio" name="colour" id="sp-1"></label>
-                                <label class="c-2" for="sp-2"><input type="radio" name="colour" id="sp-2"></label>
-                                <label class="c-3" for="sp-3"><input type="radio" name="colour" id="sp-3"></label>
-                                <label class="c-4" for="sp-4"><input type="radio" name="colour" id="sp-4"></label>
-                                <label class="c-9" for="sp-9"><input type="radio" name="colour" id="sp-9"></label>
-                            </div>
-                        </div>
+                        {% endif %}
 
                         {% if product.in_stock %}
                             <form action="{% url 'cart:add' product.id %}" method="post"

@@ -60,6 +60,9 @@
                                 <span>&minus;KES {{ order.get_discount|floatformat:2 }}</span></li>
                         {% endif %}
                         <li class="grand-total">Total <span>KES {{ order.get_total|floatformat:2 }}</span></li>
+                        {% if order.payment.mpesa_receipt %}
+                            <li>M-Pesa receipt <span>{{ order.payment.mpesa_receipt }}</span></li>
+                        {% endif %}
                     </ul>
 
                     <h6 class="mt-4">Delivery</h6>

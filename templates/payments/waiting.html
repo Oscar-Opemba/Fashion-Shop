@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Check your phone{% endblock %}
+
+{% block content %}
+<section class="payment-state spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="payment-state__card">
+                    <div class="payment-state__spinner" id="paySpinner"></div>
+
+                    <h3>Check your phone</h3>
+                    <p class="payment-state__lead">
+                        We sent an M-Pesa request to <strong>{{ order.phone }}</strong> for
+                        <strong>KES {{ order.get_total|floatformat:2 }}</strong>.
+                        Enter your M-Pesa PIN to complete order #{{ order.pk }}.
+                    </p>
+
+                    <p class="payment-state__status" id="payStatus">Waiting for confirmation&hellip;</p>
+
+                    <p class="payment-state__hint">
+                        Didn't get a prompt? It can take a few seconds. Keep this page open.
+                    </p>
+
+                    <form action="{% url 'payments:retry' order.pk %}" method="post"
+                          id="retryForm" class="payment-state__retry" hidden>
+                        {% csrf_token %}
+                        <button type="submit" class="primary-btn">Send the prompt again</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var statusUrl = "{% url 'payments:status' order.pk %}";
+    var statusEl = document.getElementById('payStatus');
+    var spinner = document.getElementById('paySpinner');
+    var retry = document.getElementById('retryForm');
+
+    var POLL_MS = 3000;
+    // Safaricom expires an unanswered prompt after about a minute; stop a
+    // little later so a slow confirmation still has a chance to land.
+    var DEADLINE = Date.now() + 90000;
+
+    function stop(message) {
+        spinner.classList.add('is-done');
+        statusEl.textContent = message;
+        retry.hidden = false;
+    }
+
+    function poll() {
+        if (Date.now() > DEADLINE) {
+            stop('We have not heard back yet. You can try again.');
+            return;
+        }
+
+        fetch(statusUrl, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.redirect) {
+                    window.location = data.redirect;
+                    return;
+                }
+                if (data.message) {
+                    statusEl.textContent = data.message;
+                }
+                setTimeout(poll, POLL_MS);
+            })
+            .catch(function () {
+                // A dropped request is not a failed payment; keep polling.
+                setTimeout(poll, POLL_MS);
+            });
+    }
+
+    setTimeout(poll, POLL_MS);
+})();
+</script>
+{% endblock %}

@@ -2,7 +2,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, render
 
-from .models import Category, Product
+from .models import Category, Colour, Product, Size
 
 PAGE_SIZE = 12
 
@@ -15,6 +15,31 @@ PRICE_BANDS = [
     (10000, 20000),
     (20000, None),
 ]
+
+
+def facet_links(request, param, options):
+    """Build sidebar links for a size/colour facet.
+
+    Each link toggles its own value and drops `page`, so switching a facet
+    never lands the shopper on a page number that no longer exists. Other
+    active filters are carried through untouched.
+    """
+    active = request.GET.get(param, '').strip()
+    links = []
+    for option in options:
+        params = request.GET.copy()
+        params.pop('page', None)
+        is_active = option.slug == active
+        if is_active:
+            params.pop(param, None)
+        else:
+            params[param] = option.slug
+        links.append({
+            'option': option,
+            'active': is_active,
+            'query': params.urlencode(),
+        })
+    return links
 
 
 def price_band_links(request):
@@ -65,6 +90,22 @@ def product_list(request):
             except ValueError:
                 pass
 
+    size_slug = request.GET.get('size', '').strip()
+    active_size = None
+    if size_slug:
+        active_size = Size.objects.filter(slug=size_slug).first()
+        # An unknown slug filters nothing rather than 404ing — these come from
+        # bookmarked or hand-edited urls, not from a link we rendered.
+        products = products.filter(sizes=active_size) if active_size else products.none()
+
+    colour_slug = request.GET.get('colour', '').strip()
+    active_colour = None
+    if colour_slug:
+        active_colour = Colour.objects.filter(slug=colour_slug).first()
+        products = (
+            products.filter(colours=active_colour) if active_colour else products.none()
+        )
+
     sort = request.GET.get('sort', '')
     products = products.order_by(
         {'price': 'price', '-price': '-price', 'name': 'name'}.get(sort, '-created')
@@ -87,12 +128,24 @@ def product_list(request):
         'sort': sort,
         'querystring': params.urlencode(),
         'price_bands': price_band_links(request),
+        # Only offer facet values that some live product actually carries,
+        # otherwise the sidebar advertises filters that return nothing.
+        'size_links': facet_links(
+            request, 'size', Size.objects.filter(products__is_active=True).distinct()
+        ),
+        'colour_links': facet_links(
+            request, 'colour', Colour.objects.filter(products__is_active=True).distinct()
+        ),
+        'active_size': active_size,
+        'active_colour': active_colour,
     })
 
 
 def product_detail(request, slug):
     product = get_object_or_404(
-        Product.objects.select_related('category').prefetch_related('images'),
+        Product.objects.select_related('category').prefetch_related(
+            'images', 'sizes', 'colours'
+        ),
         slug=slug, is_active=True,
     )
 
