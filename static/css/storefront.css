@@ -616,6 +616,13 @@
 
 .manage__table td a:hover { color: #e53637; }
 
+.manage__actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 28px;
+}
+
 .manage__search {
     margin-bottom: 24px;
 }
@@ -629,19 +636,58 @@
     margin-right: 8px;
 }
 
-/* The size/colour checkbox lists render as a plain <ul>; lay them out inline
-   so eight sizes do not become eight rows. */
-.checkout__input ul {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 20px;
+/* The staff form deliberately does NOT reuse .checkout__input — that class
+   floats its children for the two-column checkout, which throws a ten-field
+   product form into a heap. This is a plain stacked layout instead. */
+
+.manage__form { margin-top: 20px; }
+
+.manage__field { margin-bottom: 24px; }
+
+.manage__field > label {
+    display: block;
+    color: #111111;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
 }
 
-.checkout__input ul li {
+.manage__field input[type="text"],
+.manage__field input[type="number"],
+.manage__field input[type="url"],
+.manage__field textarea,
+.manage__field select {
+    width: 100%;
+    border: 1px solid #e5e5e5;
+    font-size: 14px;
+    color: #111111;
+    padding: 12px 15px;
+}
+
+/* main.js turns every <select> into a nice-select div, which sizes itself to
+   its content unless told otherwise. */
+.manage__field .nice-select { width: 100%; }
+
+.manage__field--check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.manage__field--check > label { margin: 0; font-weight: 400; }
+
+/* Sizes and colours render as one <div> per checkbox; inline-block turns
+   eight sizes into a row instead of eight lines. */
+.manage__field--options > div > div {
     display: inline-block;
-    margin-right: 16px;
+    margin: 0 18px 8px 0;
     font-size: 14px;
     color: #111111;
 }
 
-.checkout__input ul li input { margin-right: 6px; }
+.manage__field--options input { margin-right: 6px; }
+
+.manage__form .form-hint,
+.manage__form .form-error { margin: -18px 0 20px; }
+
+.manage__form .site-btn + .link-button { margin-left: 20px; }

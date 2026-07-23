@@ -1225,6 +1225,16 @@ app_name = 'shop'
 
 urlpatterns = [
     path('', views.product_list, name='product_list'),
+
+    # Staff CRUD — see 7.6. These MUST stay above the slug pattern.
+    path('manage/', views.ProductManageList.as_view(), name='manage_list'),
+    path('manage/new/', views.ProductCreateView.as_view(), name='product_create'),
+    path('manage/<slug:slug>/edit/', views.ProductUpdateView.as_view(),
+         name='product_update'),
+    path('manage/<slug:slug>/delete/', views.ProductDeleteView.as_view(),
+         name='product_delete'),
+    # ... and the same three for categories
+
     path('<slug:slug>/', views.product_detail, name='product_detail'),
 ]
 ```
@@ -1241,7 +1251,8 @@ than a hunt through thirty templates.
 > **The ordering trap.** `<slug:slug>/` under `/shop/` is a catch-all. If you
 > later add `path('sale/', views.sale)`, it must go **above** the slug pattern —
 > otherwise `/shop/sale/` matches the slug route, Django looks for a product
-> with the slug "sale", and the shopper gets a 404.
+> with the slug "sale", and the shopper gets a 404. That is exactly why the
+> `manage/` routes above sit where they do.
 
 ### 7.4 A view, annotated
 
@@ -1326,6 +1337,127 @@ And `facet_links()` builds each sidebar link by copying the current
 querystring, toggling one value and dropping `page` — so filters combine
 (`?size=xl&colour=navy`) instead of replacing each other, and switching a
 filter never lands you on page 5 of a 2-page result.
+
+### 7.6 CRUD — creating, updating and deleting from the site
+
+Everything so far has been **R**ead. The other three letters — Create, Update,
+Delete — are so repetitive that Django ships them as classes. Compare:
+
+```python
+# The function you would write by hand
+def product_create(request):
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES)
+        if form.is_valid():
+            product = form.save()
+            return redirect('shop:manage_list')
+    else:
+        form = ProductForm()
+    return render(request, 'shop/product_form.html', {'form': form})
+
+
+# The same thing, as a class-based view
+class ProductCreateView(StaffRequiredMixin, CreateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'shop/product_form.html'
+    success_url = reverse_lazy('shop:manage_list')
+```
+
+`CreateView` does the GET/POST branch, the `is_valid()` check, the save and
+the redirect. `UpdateView` adds "fetch the object first and pass it as
+`instance`". `DeleteView` shows a confirmation page on GET and deletes on
+POST. You override a method only where this project differs from the default.
+
+**The form comes first.** `shop/forms.py`:
+
+```python
+class ProductForm(SlugFromNameMixin, BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = [
+            'name', 'slug', 'description', 'price', 'category',
+            'sizes', 'colours', 'image', 'stock', 'is_active',
+        ]
+        widgets = {
+            'description': CKEditor5Widget(config_name='extends'),
+            'sizes': forms.CheckboxSelectMultiple,
+            'colours': forms.CheckboxSelectMultiple,
+        }
+```
+
+A `ModelForm` reads the field types off the model, so a `DecimalField` gets a
+number input and validation for free. `widgets` only overrides how a field is
+*drawn* — this is where the rich-text editor from Part 5 finally gets used,
+without the model column having to know about it.
+
+Three decisions in this app worth understanding:
+
+**1. The slug is filled during validation, not at save.** `Product.save()`
+slugifies a blank slug — but that runs *after* the form has decided the data
+is valid. Add a second "Denim Jacket" and you get an `IntegrityError` 500
+instead of a form error. So the form does it earlier:
+
+```python
+def clean(self):
+    cleaned = super().clean()
+    if not cleaned.get('slug') and cleaned.get('name'):
+        cleaned['slug'] = slugify(cleaned['name'])
+        self.instance.slug = cleaned['slug']   # ← so uniqueness is checked
+    return cleaned
+```
+
+`clean()` runs before Django validates the instance, so the duplicate comes
+back as *"Product with this Slug already exists"* under the field.
+
+**2. Only staff get in.** One mixin, used by all six views:
+
+```python
+class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_staff
+```
+
+A signed-out visitor is redirected to the login page; a signed-in shopper who
+guesses `/shop/manage/` gets a **403**, not a login form they cannot get past.
+Hiding the link in the header is not security — the check has to be on the
+view, and the tests assert both cases.
+
+**3. A delete can legitimately fail.** `OrderItem.product` is `PROTECT`
+(Part 5), so a product someone has bought *cannot* be deleted. Left alone,
+that is a 500:
+
+```python
+class ProtectedDeleteMixin:
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+        except ProtectedError:
+            messages.error(self.request, self.protected_message)
+            return redirect(self.get_success_url())
+        messages.success(self.request, self.success_message)
+        return response
+```
+
+The shopkeeper gets *"That product appears in an order, so it cannot be
+deleted — untick is active to retire it instead"*, which is the honest answer.
+**Retiring beats deleting** anyway: `is_active=False` hides the product from
+the shop and keeps order history readable.
+
+The template has one requirement that is easy to miss:
+
+```html
+<form method="post" enctype="multipart/form-data">
+```
+
+Without `enctype`, the browser posts field names with no file bytes and
+`request.FILES` is empty — the image silently never uploads.
+
+**Why not just use the admin?** The admin is still there and still better for
+bulk work; `/shop/manage/` links to it. But the admin is Django's UI, not
+yours: it cannot be handed to a shopkeeper who should see products and
+nothing else, and it does not follow the site's design. Building the CRUD
+views yourself is also how you learn what the admin has been doing for you.
 
 ---
 
@@ -1865,14 +1997,14 @@ Facebook requires https, so use the ngrok host when testing locally).
 python manage.py test
 ```
 ```
-Ran 83 tests in 1.590s
+Ran 95 tests in 2.459s
 
 OK
 ```
 
 | App | Tests | Covers |
 |---|---|---|
-| `shop` | 23 | listing, search, price bounds, size/colour facets, detail access, seed integrity |
+| `shop` | 35 | listing, search, price bounds, size/colour facets, detail access, seed integrity, staff CRUD |
 | `orders` | 24 | checkout, stock timing, totals, coupons, phone normalisation, order ownership |
 | `payments` | 14 | phone parsing, STK push, callback idempotency, token rejection |
 | `accounts` | 10 | profile signal, one-default-address rule, cross-user access |
@@ -1887,6 +2019,8 @@ The ones worth keeping green are the security-shaped ones:
 - a second user must get a **404** on someone else's order and address
 - a callback with a **bad token** must 404
 - a **replayed callback** must not take stock twice
+- a signed-in, non-staff shopper must get a **403** from every `/shop/manage/`
+  url — including a `POST` straight at the delete route, not just the page
 
 Those are the tests that catch a refactor quietly opening a hole.
 
@@ -1923,7 +2057,7 @@ python manage.py seed               # demo data — safe to re-run
 python manage.py seed --flush       # wipe products/categories first
 python manage.py createsuperuser
 python manage.py shell              # a Python REPL with Django loaded
-python manage.py test               # all 83
+python manage.py test               # all 95
 python manage.py findstatic css/style.css     # debug a missing asset
 python manage.py collectstatic      # deploy only → staticfiles/
 ngrok http 8000                     # public https url for the M-Pesa callback

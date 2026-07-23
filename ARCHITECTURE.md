@@ -45,12 +45,14 @@ Fashion-Shop/
 ├── shop/                                   ── PRODUCTS — the domain center ──
 │   ├── models.py                     118   Category, Product, ProductImage,
 │   │                                       Size, Colour
-│   ├── views.py                      157   product_list, product_detail,
-│   │                                       facet_links, price_band_links
+│   ├── views.py                      298   product_list, product_detail,
+│   │                                       facet_links, price_band_links,
+│   │                                       + 6 staff CRUD class-based views
+│   ├── forms.py                       83   ProductForm, CategoryForm
 │   ├── admin.py                       53   4 × @admin.register + image inline
-│   ├── urls.py                        10   app_name='shop'
+│   ├── urls.py                        42   app_name='shop'
 │   ├── context_processors.py           6   nav_categories, on EVERY template
-│   ├── tests.py                      221
+│   ├── tests.py                      397
 │   ├── migrations/                         0001_initial, 0002 (drops Review /
 │   │                                       WishlistItem), 0003 (Size, Colour)
 │   └── management/commands/seed.py   438   `manage.py seed` — repeatable demo data

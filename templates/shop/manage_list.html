@@ -14,11 +14,11 @@
         <div class="row">
             <div class="col-lg-12">
                 <h4>Products</h4>
-                <p>
+                <div class="manage__actions">
                     <a href="{% url 'shop:product_create' %}" class="site-btn">Add product</a>
                     <a href="{% url 'shop:category_create' %}" class="link-button">Add category</a>
                     <a href="/admin/shop/" class="link-button">Full admin</a>
-                </p>
+                </div>
 
                 <form method="get" class="manage__search">
                     <input type="text" name="q" value="{{ query }}" placeholder="Search by name">

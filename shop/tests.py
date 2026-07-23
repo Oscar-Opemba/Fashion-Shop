@@ -300,6 +300,21 @@ class ProductCrudTests(TestCase):
             self.client.get(reverse('shop:product_list')), hidden.name
         )
 
+    def test_every_staff_page_renders(self):
+        self.client.force_login(self.staff)
+        for name, kwargs in (
+            ('shop:manage_list', {}),
+            ('shop:product_create', {}),
+            ('shop:product_update', {'slug': self.product.slug}),
+            ('shop:product_delete', {'slug': self.product.slug}),
+            ('shop:category_create', {}),
+            ('shop:category_update', {'slug': self.category.slug}),
+            ('shop:category_delete', {'slug': self.category.slug}),
+        ):
+            with self.subTest(view=name):
+                response = self.client.get(reverse(name, kwargs=kwargs))
+                self.assertEqual(response.status_code, 200)
+
     # -- create -------------------------------------------------------------
 
     def test_staff_can_create_a_product(self):

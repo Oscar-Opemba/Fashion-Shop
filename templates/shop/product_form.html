@@ -15,32 +15,35 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-8 col-md-10">
-                <div class="checkout__form">
-                    <h4>{{ title }}</h4>
-                    {# enctype matters: the image field posts a file. #}
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        {% if form.non_field_errors %}
-                            {% for error in form.non_field_errors %}
-                                <small class="form-error">{{ error }}</small>
-                            {% endfor %}
-                        {% endif %}
-                        {% for field in form %}
-                            <div class="checkout__input{% if field.field.widget.input_type == 'checkbox' and not field.field.widget.allow_multiple_selected %} checkout__input--check{% endif %}">
+                <h4>{{ title }}</h4>
+                {# enctype matters: the image field posts a file. #}
+                <form method="post" enctype="multipart/form-data" class="manage__form">
+                    {% csrf_token %}
+                    {% for error in form.non_field_errors %}
+                        <small class="form-error">{{ error }}</small>
+                    {% endfor %}
+                    {% for field in form %}
+                        {% if field.field.widget.input_type == 'checkbox' and not field.field.widget.allow_multiple_selected %}
+                            <div class="manage__field manage__field--check">
+                                {{ field }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            </div>
+                        {% else %}
+                            <div class="manage__field{% if field.field.widget.allow_multiple_selected %} manage__field--options{% endif %}">
                                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                 {{ field }}
-                                {% if field.help_text %}
-                                    <small class="form-hint">{{ field.help_text }}</small>
-                                {% endif %}
-                                {% for error in field.errors %}
-                                    <small class="form-error">{{ error }}</small>
-                                {% endfor %}
                             </div>
+                        {% endif %}
+                        {% if field.help_text %}
+                            <small class="form-hint">{{ field.help_text }}</small>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <small class="form-error">{{ error }}</small>
                         {% endfor %}
-                        <button type="submit" class="site-btn">Save</button>
-                        <a href="{% url 'shop:manage_list' %}" class="link-button">Cancel</a>
-                    </form>
-                </div>
+                    {% endfor %}
+                    <button type="submit" class="site-btn">Save</button>
+                    <a href="{% url 'shop:manage_list' %}" class="link-button">Cancel</a>
+                </form>
             </div>
         </div>
     </div>
