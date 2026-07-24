@@ -35,3 +35,6 @@ demo_token.py
 
 # Local demo script — full payment flow (presentation)
 demo_payment.py
+
+# Local helper — restart tunnel + server (presentation)
+restart_tunnel.sh
