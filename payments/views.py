@@ -23,6 +23,20 @@ logger = logging.getLogger(__name__)
 # retry the callback, so we always accept and sort out the meaning ourselves.
 ACK = {'ResultCode': 0, 'ResultDesc': 'Accepted'}
 
+# ResultCodes from the STK *query* API that are a real, final customer outcome.
+# The query endpoint (notably in the sandbox) also returns transient codes such
+# as 4999, or 1001 "a transaction is already in process", even for pushes that
+# ultimately succeed. Anything not in this set is treated as "not decided yet"
+# and left to the authoritative callback, rather than failing a payment that may
+# well have gone through.
+TERMINAL_STK_FAILURE_CODES = {
+    '1',     # insufficient balance
+    '1019',  # transaction expired
+    '1032',  # request cancelled by the user
+    '1037',  # timed out — no response / subscriber unreachable
+    '2001',  # wrong M-PESA PIN
+}
+
 
 def start(request, order_id):
     """Fire the STK push and send the shopper to the waiting page."""
@@ -98,14 +112,23 @@ def status(request, order_id):
         # While the prompt is still on the handset Daraja answers with
         # errorCode 500.001.1001 and no ResultCode. Only a ResultCode is a
         # verdict; anything else means keep waiting.
-        if code:
-            if code == '0':
-                _mark_paid(payment, receipt='', result_desc=result.get('ResultDesc', ''))
-            else:
-                # Every non-zero code is terminal (1032 is the user cancelling).
-                _mark_failed(payment, code, result.get('ResultDesc', ''))
+        if code == '0':
+            _mark_paid(payment, receipt='', result_desc=result.get('ResultDesc', ''))
             payment.refresh_from_db()
             order.refresh_from_db()
+        elif code in TERMINAL_STK_FAILURE_CODES:
+            _mark_failed(payment, code, result.get('ResultDesc', ''))
+            payment.refresh_from_db()
+            order.refresh_from_db()
+        elif code:
+            # A non-zero code that is not a known terminal outcome (4999 and
+            # friends) is a transient query-API artefact, not a real failure.
+            # The callback is the source of truth, so keep waiting for it.
+            logger.info(
+                'STK query for order %s returned non-terminal code %s (%s); '
+                'waiting for the callback',
+                order.pk, code, result.get('ResultDesc', ''),
+            )
 
     return JsonResponse({
         'paid': order.paid,

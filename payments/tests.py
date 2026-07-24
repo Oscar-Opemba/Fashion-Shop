@@ -234,3 +234,72 @@ class PaymentRetryTests(TestCase):
         self.assertEqual(payment.status, MpesaPayment.Status.PENDING)
         self.assertEqual(payment.result_code, '')
         self.assertEqual(payment.result_desc, '')
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class StatusPollTests(TestCase):
+    def setUp(self):
+        category = Category.objects.create(name='Shirts')
+        self.product = Product.objects.create(
+            category=category, name='Test Shirt', price=Decimal('1500.00'), stock=10,
+        )
+
+    def place_pending_order(self):
+        self.client.post(f'/cart/add/{self.product.id}/', {'quantity': 1})
+        response = self.client.post('/orders/checkout/', {
+            'full_name': 'Guest', 'phone': '0704018188',
+            'county': 'Nairobi', 'town': 'T', 'street': 'S',
+        })
+        order_id = int(response['Location'].rstrip('/').split('/')[-1])
+        MpesaPayment.objects.create(
+            order=Order.objects.get(pk=order_id), phone='254704018188',
+            amount=1500, checkout_request_id='ws_CO_POLL',
+            status=MpesaPayment.Status.PENDING,
+        )
+        return order_id
+
+    def poll(self, order_id):
+        return self.client.get(f'/payments/status/{order_id}/')
+
+    def test_transient_query_code_does_not_fail_the_order(self):
+        """Regression: a real KES 1 payment succeeded, but the status poll saw
+        Daraja's transient query code 4999 and marked the order failed before
+        the authoritative callback (ResultCode 0) could land."""
+        order_id = self.place_pending_order()
+
+        with patch('payments.views.query_stk_status',
+                   return_value={'ResultCode': '4999', 'ResultDesc': 'still processing'}):
+            data = self.poll(order_id).json()
+
+        self.assertEqual(data['paid'], False)
+        self.assertIsNone(data['redirect'])  # keep waiting, do not send to /failed/
+        self.assertEqual(
+            MpesaPayment.objects.get(order_id=order_id).status,
+            MpesaPayment.Status.PENDING,
+        )
+
+    def test_genuine_terminal_code_still_fails_the_order(self):
+        """A real terminal outcome — 1032, the user cancelling — must still fail
+        the order rather than spin forever."""
+        order_id = self.place_pending_order()
+
+        with patch('payments.views.query_stk_status',
+                   return_value={'ResultCode': '1032', 'ResultDesc': 'Cancelled by user'}):
+            data = self.poll(order_id).json()
+
+        self.assertEqual(data['paid'], False)
+        self.assertTrue(data['redirect'].endswith(f'/payments/failed/{order_id}/'))
+        self.assertEqual(
+            MpesaPayment.objects.get(order_id=order_id).status,
+            MpesaPayment.Status.FAILED,
+        )
+
+    def test_success_code_marks_paid(self):
+        order_id = self.place_pending_order()
+
+        with patch('payments.views.query_stk_status',
+                   return_value={'ResultCode': '0', 'ResultDesc': 'ok'}):
+            data = self.poll(order_id).json()
+
+        self.assertEqual(data['paid'], True)
+        self.assertTrue(data['redirect'].endswith(f'/payments/success/{order_id}/'))
