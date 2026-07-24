@@ -1735,6 +1735,49 @@ validation. Restart `runserver` after editing `.env`.
 > The free ngrok URL changes every restart. Both settings need updating each
 > time.
 
+#### cloudflared — an alternative tunnel that needs no account
+
+ngrok requires signing up for an authtoken. If you would rather not, Cloudflare's
+`cloudflared` gives a **quick tunnel** with no login at all. Install the binary
+once (no root needed):
+
+```bash
+mkdir -p ~/.local/bin
+curl -fL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+  -o ~/.local/bin/cloudflared && chmod +x ~/.local/bin/cloudflared
+```
+
+Then, in its own terminal (leave it running alongside `runserver`):
+
+```bash
+cloudflared tunnel --url http://localhost:8010
+```
+```
+https://tide-lovers-pipeline-camcorder.trycloudflare.com
+```
+
+Use that as your `MPESA_CALLBACK_BASE_URL`. Like ngrok, the hostname is random
+and **changes every restart**.
+
+#### Wildcard the host so only ONE setting changes on restart
+
+Re-editing `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` on every tunnel restart is
+tedious and easy to forget — a forgotten host makes Django reject the incoming
+callback with `400 DisallowedHost`, and the payment silently never records.
+Django accepts a leading-dot entry as "any subdomain", so wildcard the tunnel
+domain once and you never touch these two again:
+
+```bash
+# ngrok:       .ngrok-free.app  /  https://*.ngrok-free.app
+# cloudflared: .trycloudflare.com  /  https://*.trycloudflare.com
+ALLOWED_HOSTS=localhost,127.0.0.1,.trycloudflare.com
+CSRF_TRUSTED_ORIGINS=https://*.trycloudflare.com
+```
+
+With that in place, the **only** value you update when the tunnel restarts is
+`MPESA_CALLBACK_BASE_URL`. Restart `runserver` afterwards — the reloader watches
+`.py` files, not `.env`, so a `.env`-only edit is not picked up automatically.
+
 ### 10.4 The Daraja client
 
 `payments/daraja.py`, ~210 lines, no SDK — the surface needed is three HTTP
@@ -2092,14 +2135,15 @@ Six commands and you have a running shop with 20 products.
 | CSS loads but images 404 | wrong folder name | it is `img/`, not `images/` |
 | Uploaded photos 404 | media not served | the `if settings.DEBUG:` block in `myproject/urls.py` |
 | `CSRF verification failed` | new host (ngrok) not trusted | add it to `CSRF_TRUSTED_ORIGINS`, restart |
-| `SuspiciousOperation: Invalid HTTP_HOST` | host not allowed | add it to `ALLOWED_HOSTS` |
+| `SuspiciousOperation: Invalid HTTP_HOST` | host not allowed | add it to `ALLOWED_HOSTS` (wildcard the tunnel domain: `.trycloudflare.com`) |
+| M-Pesa: callback POST 400s `DisallowedHost` | tunnel host not in `ALLOWED_HOSTS` | wildcard it (see 10.3); payment never records until fixed |
 | Form silently does nothing | missing `{% csrf_token %}` | add it inside every POST form |
 | `TemplateDoesNotExist` | path wrong or app not in `INSTALLED_APPS` | check both |
 | `ImproperlyConfigured: Pillow` | `pillow` missing | `pip install pillow` |
 | Product page 404s | product `is_active=False` | the detail view filters on it |
 | Test client 400s | `testserver` not in `ALLOWED_HOSTS` | `@override_settings(ALLOWED_HOSTS=['testserver'])` |
 | M-Pesa: "MPESA_CALLBACK_BASE_URL is not set" | ngrok URL missing | set it in `.env`, restart |
-| M-Pesa: callback never arrives | ngrok restarted, URL changed | update `.env`, restart |
+| M-Pesa: callback never arrives | tunnel restarted, URL changed | update only `MPESA_CALLBACK_BASE_URL` (host is wildcarded), restart |
 
 **How to read a Django traceback:** with `DEBUG=True` the browser shows the
 full stack. Read it **bottom up** — the last line is the actual error. Then
