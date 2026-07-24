@@ -67,11 +67,11 @@ Fashion-Shop/
 │   └── migrations/__init__.py              no migrations — nothing persisted
 │
 ├── orders/                                 ── CHECKOUT & ORDERS ──
-│   ├── models.py                     108   Coupon, Order, OrderItem
-│   ├── views.py                      185   checkout, coupon apply/remove,
+│   ├── models.py                     162   Coupon, Order, OrderItem
+│   ├── views.py                      190   checkout, coupon apply/remove,
 │   │                                       history, detail, _owns_order
-│   ├── forms.py                       83   OrderCreateForm, CouponApplyForm
-│   ├── admin.py                       32   Order + Coupon admin
+│   ├── forms.py                       90   OrderCreateForm, CouponApplyForm
+│   ├── admin.py                       41   Order + Coupon admin
 │   ├── urls.py                        13   app_name='orders'
 │   ├── tests.py                      217
 │   └── migrations/                         0001, 0002 (drops payment fields),
@@ -217,8 +217,8 @@ does not record which size was picked.
 
 | Model | Key fields | Notes |
 |---|---|---|
-| `Coupon` | `code` (unique), `discount_percent` (1–100), `valid_from`/`valid_to`, `active` | `is_valid` property checks the window |
-| `Order` | `user` FK **SET_NULL, nullable** → guest checkout; `full_name`, `phone`, `email`, `county`, `town`, `street`, `notes`; `coupon` FK SET_NULL; `discount_percent`; `status`; `paid`; `stock_applied` | money: `get_subtotal()`, `get_discount()`, `get_total()`, `get_mpesa_amount()` |
+| `Coupon` | `code` (unique), `discount_percent` (1–100), `valid_from`/`valid_to`, `active`, `categories` (M2M → `Category`), `max_uses`/`times_used` | `is_valid` checks the window **and** `times_used < max_uses`; `discount_for(lines)` scopes the discount to qualifying categories (empty = whole cart); a use is counted in `payments._mark_paid` when the order is paid |
+| `Order` | `user` FK **SET_NULL, nullable** → guest checkout; `full_name`, `phone`, `email`, `county`, `town`, `street`, `notes`; `coupon` FK SET_NULL; `discount_percent`; `discount_amount` (frozen at checkout, nullable); `status`; `paid`; `stock_applied` | money: `get_subtotal()`, `get_discount()` (frozen amount, falls back to percent for old orders), `get_total()`, `get_mpesa_amount()` |
 | `OrderItem` | `order` FK CASCADE, `product` FK **PROTECT**, `price`, `quantity` | `price` is a **snapshot** — later price changes don't rewrite history |
 
 `Order.Status`: `pending` → `paid` → `shipped` → `delivered`, plus `cancelled`.

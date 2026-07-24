@@ -29,3 +29,9 @@ staticfiles/
 
 # User uploads
 media/
+
+# Local demo script — token generation test (Lesson 4.2)
+demo_token.py
+
+# Local demo script — full payment flow (presentation)
+demo_payment.py

@@ -74,6 +74,12 @@
                                         Coupon {{ coupon.code }} (&minus;{{ coupon.discount_percent }}%)
                                         <span>&minus;KES {{ discount|floatformat:2 }}</span>
                                     </li>
+                                    {% if not discount %}
+                                        <li class="coupon-note">
+                                            This coupon only applies to certain categories &mdash;
+                                            nothing in your cart qualifies.
+                                        </li>
+                                    {% endif %}
                                     <li class="coupon-remove-row">
                                         <a href="{% url 'orders:coupon_remove' %}" class="coupon-remove">Remove coupon</a>
                                     </li>

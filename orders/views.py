@@ -43,6 +43,11 @@ def checkout(request):
                 if coupon:
                     order.coupon = coupon
                     order.discount_percent = coupon.discount_percent
+                    # Freeze the discount now, scoped to qualifying categories,
+                    # so it survives the coupon later changing or being deleted.
+                    order.discount_amount = coupon.discount_for(
+                        (item['product'], item['total_price']) for item in cart
+                    )
 
                 order.save()
 
@@ -80,7 +85,7 @@ def checkout(request):
     coupon = _session_coupon(request)
     subtotal = cart.get_total_price()
     discount = (
-        (subtotal * coupon.discount_percent / Decimal('100')).quantize(Decimal('0.01'))
+        coupon.discount_for((item['product'], item['total_price']) for item in cart)
         if coupon else Decimal('0')
     )
 

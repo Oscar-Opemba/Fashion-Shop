@@ -820,6 +820,10 @@ computed from the frozen lines:
         return sum((item.get_cost() for item in self.items.all()), Decimal('0'))
 
     def get_discount(self):
+        # Prefer the amount frozen at checkout (it already accounts for any
+        # category scoping). Fall back to the percentage for older orders.
+        if self.discount_amount is not None:
+            return self.discount_amount
         if not self.discount_percent:
             return Decimal('0')
         return (self.get_subtotal() * self.discount_percent / Decimal('100')).quantize(
@@ -833,6 +837,31 @@ computed from the frozen lines:
 Computing beats storing here, because a stored total can silently disagree with
 the lines it is supposed to sum. There is no such thing as an out-of-date
 computed total.
+
+The **discount** is the one figure that is frozen rather than recomputed. A
+coupon can be scoped to categories (see below), so the percentage alone no
+longer tells you the amount — it depends on which lines qualified. That amount
+is worked out once at checkout and stored on `Order.discount_amount`, the same
+way line prices are frozen. `NULL` means the order never had a coupon (or
+predates the field); a coupon that matched nothing stores `0.00`, which is why
+`get_discount()` tests `is not None` rather than truthiness.
+
+#### Coupons: category scoping and a usage cap
+
+A `Coupon` is a percentage off, but two things narrow when and how much:
+
+- **`categories`** (M2M to `shop.Category`) — if set, only cart lines whose
+  product is in one of those categories are discounted; other lines pay full
+  price. Left empty, the coupon applies to the whole cart. The logic lives in
+  `Coupon.discount_for(lines)`, which both the checkout preview and order
+  creation call, so the figure the shopper sees is the figure that is frozen.
+- **`max_uses` / `times_used`** — a coupon may be redeemed a fixed number of
+  times in total (default 1). `is_valid` fails once `times_used` reaches
+  `max_uses`, and the apply form rejects a spent code. Crucially, a use is
+  counted in `payments._mark_paid` — when an order is actually **paid** — not
+  when the code is typed in. An abandoned or failed STK prompt never burns a
+  use, and the `stock_applied` guard that already makes the callback idempotent
+  makes the increment fire exactly once too.
 
 ### 5.7 `TextChoices` for status fields
 
@@ -2040,7 +2069,7 @@ Facebook requires https, so use the ngrok host when testing locally).
 python manage.py test
 ```
 ```
-Ran 95 tests in 2.459s
+Ran 118 tests in 2.459s
 
 OK
 ```
@@ -2048,9 +2077,9 @@ OK
 | App | Tests | Covers |
 |---|---|---|
 | `shop` | 35 | listing, search, price bounds, size/colour facets, detail access, seed integrity, staff CRUD |
-| `orders` | 24 | checkout, stock timing, totals, coupons, phone normalisation, order ownership |
-| `payments` | 14 | phone parsing, STK push, callback idempotency, token rejection |
-| `accounts` | 10 | profile signal, one-default-address rule, cross-user access |
+| `orders` | 29 | checkout, stock timing, totals, coupons (category scoping + usage cap), phone normalisation, order ownership |
+| `payments` | 21 | phone parsing, STK push, callback idempotency, coupon redemption, token rejection |
+| `accounts` | 21 | profile signal, one-default-address rule, cross-user access |
 | `core` | 8 | home page, deal of the week, contact form |
 | `cart` | 4 | session serialisation, stock capping, captured prices |
 

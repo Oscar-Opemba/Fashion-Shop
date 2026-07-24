@@ -17,13 +17,54 @@ class Coupon(models.Model):
     valid_to = models.DateTimeField()
     active = models.BooleanField(default=True)
 
+    # Scope the discount to products in these categories. Left empty, the
+    # coupon applies to the whole cart (the original behaviour).
+    categories = models.ManyToManyField(
+        'shop.Category', blank=True, related_name='coupons',
+        help_text='Only discount products in these categories. '
+                  'Leave empty to apply to the whole cart.',
+    )
+
+    # How many times the coupon may be redeemed in total, and how many times it
+    # already has been. A redemption is counted when an order is actually paid
+    # (see payments._mark_paid), not when the code is applied at checkout.
+    max_uses = models.PositiveIntegerField(
+        default=1, validators=[MinValueValidator(1)],
+        help_text='Total number of times this coupon can be redeemed.',
+    )
+    times_used = models.PositiveIntegerField(default=0, editable=False)
+
     def __str__(self):
         return f'{self.code} ({self.discount_percent}%)'
 
     @property
     def is_valid(self):
         now = timezone.now()
-        return self.active and self.valid_from <= now <= self.valid_to
+        return (
+            self.active
+            and self.valid_from <= now <= self.valid_to
+            and self.times_used < self.max_uses
+        )
+
+    def discount_for(self, lines):
+        """Discount (Decimal) this coupon gives on an iterable of cart/order lines.
+
+        `lines` is an iterable of ``(product, line_cost)`` pairs. Only lines
+        whose product sits in one of the coupon's categories count toward the
+        discount; with no categories set, every line qualifies. Returns whole
+        cents, rounded to two places.
+        """
+        category_ids = set(self.categories.values_list('id', flat=True))
+        qualifying = sum(
+            (
+                cost for product, cost in lines
+                if not category_ids or product.category_id in category_ids
+            ),
+            Decimal('0'),
+        )
+        return (qualifying * self.discount_percent / Decimal('100')).quantize(
+            Decimal('0.01')
+        )
 
 
 class Order(models.Model):
@@ -56,6 +97,14 @@ class Order(models.Model):
         Coupon, on_delete=models.SET_NULL, null=True, blank=True
     )
     discount_percent = models.PositiveIntegerField(default=0)
+    # The discount in shillings, frozen at checkout. Because a coupon can now
+    # be scoped to categories, the percentage alone no longer determines the
+    # amount, so the computed figure is captured the same way item prices are.
+    # NULL means "never had a coupon" (or a legacy order) — distinct from a
+    # coupon that qualified for 0 off because nothing in the cart matched.
+    discount_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
 
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
@@ -78,6 +127,11 @@ class Order(models.Model):
         return sum((item.get_cost() for item in self.items.all()), Decimal('0'))
 
     def get_discount(self):
+        # Prefer the amount frozen at checkout (it already accounts for any
+        # category scoping). Fall back to the percentage for orders created
+        # before discounts were snapshotted.
+        if self.discount_amount is not None:
+            return self.discount_amount
         if not self.discount_percent:
             return Decimal('0')
         return (self.get_subtotal() * self.discount_percent / Decimal('100')).quantize(

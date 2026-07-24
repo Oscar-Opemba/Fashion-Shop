@@ -4,6 +4,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import F
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
@@ -11,7 +12,7 @@ from django.views.decorators.http import require_POST
 
 from cart.cart import Cart
 from shop.models import Product
-from orders.models import Order
+from orders.models import Coupon, Order
 from orders.views import _owns_order
 
 from .daraja import DarajaError, query_stk_status, stk_push
@@ -175,6 +176,14 @@ def _mark_paid(payment, receipt, result_desc=''):
             product.stock = max(0, product.stock - item.quantity)
             product.save(update_fields=['stock'])
         order.stock_applied = True
+
+        # Count the coupon redemption here, guarded by stock_applied, so it
+        # happens exactly once and only for an order that was actually paid —
+        # an abandoned or failed STK prompt never burns a use.
+        if order.coupon_id:
+            Coupon.objects.filter(pk=order.coupon_id).update(
+                times_used=F('times_used') + 1
+            )
 
     order.save()
 

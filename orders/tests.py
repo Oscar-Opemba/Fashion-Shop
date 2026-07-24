@@ -163,6 +163,62 @@ class CouponTests(TestCase):
         self.coupon.active = False
         self.assertFalse(self.coupon.is_valid)
 
+    def test_a_used_up_coupon_is_not_valid(self):
+        self.coupon.max_uses = 2
+        self.coupon.times_used = 2
+        self.assertFalse(self.coupon.is_valid)
+        self.coupon.times_used = 1
+        self.assertTrue(self.coupon.is_valid)
+
+
+class CouponScopeTests(TestCase):
+    """A coupon can discount the whole cart or only certain categories."""
+
+    def setUp(self):
+        now = timezone.now()
+        self.shirts = Category.objects.create(name='Shirts')
+        self.shoes = Category.objects.create(name='Shoes')
+        self.shirt = Product.objects.create(
+            category=self.shirts, name='Tee', price=Decimal('1000.00'), stock=10
+        )
+        self.shoe = Product.objects.create(
+            category=self.shoes, name='Sneaker', price=Decimal('2000.00'), stock=10
+        )
+        self.coupon = Coupon.objects.create(
+            code='SAVE20', discount_percent=20,
+            valid_from=now - timedelta(days=1), valid_to=now + timedelta(days=1),
+        )
+        # (product, line_cost) pairs, the shape discount_for expects.
+        self.lines = [
+            (self.shirt, Decimal('1000.00')),
+            (self.shoe, Decimal('2000.00')),
+        ]
+
+    def test_no_categories_discounts_the_whole_cart(self):
+        # 20% of 3000 = 600
+        self.assertEqual(self.coupon.discount_for(self.lines), Decimal('600.00'))
+
+    def test_scoped_coupon_discounts_only_qualifying_lines(self):
+        self.coupon.categories.add(self.shoes)
+        # 20% of the 2000 shoe line only = 400; the shirt is untouched.
+        self.assertEqual(self.coupon.discount_for(self.lines), Decimal('400.00'))
+
+    def test_scoped_coupon_with_no_match_gives_zero(self):
+        empty = Category.objects.create(name='Hats')
+        self.coupon.categories.add(empty)
+        self.assertEqual(self.coupon.discount_for(self.lines), Decimal('0.00'))
+
+    def test_frozen_amount_is_used_over_the_percentage(self):
+        order = Order.objects.create(
+            **DETAILS, discount_percent=20, discount_amount=Decimal('400.00')
+        )
+        OrderItem.objects.create(
+            order=order, product=self.shirt,
+            price=Decimal('1000.00'), quantity=3,
+        )
+        # Percentage would say 600 off 3000; the frozen amount wins.
+        self.assertEqual(order.get_discount(), Decimal('400.00'))
+
 
 class PhoneCleaningTests(TestCase):
     """Kenyan numbers get typed every which way; all of them must normalise."""

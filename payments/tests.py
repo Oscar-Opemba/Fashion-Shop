@@ -1,11 +1,13 @@
 import json
+from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from shop.models import Category, Product
-from orders.models import Order, OrderItem
+from orders.models import Coupon, Order, OrderItem
 
 from .daraja import normalise_phone
 from .models import MpesaPayment
@@ -114,6 +116,74 @@ class CallbackTests(TestCase):
             data='not json', content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'], MPESA_CALLBACK_TOKEN=CALLBACK_TOKEN)
+class CouponRedemptionTests(TestCase):
+    """A coupon use is counted when an order is paid, exactly once."""
+
+    def setUp(self):
+        now = timezone.now()
+        category = Category.objects.create(name='Shirts')
+        self.product = Product.objects.create(
+            category=category, name='Test Shirt', price=Decimal('1500.00'), stock=10
+        )
+        self.coupon = Coupon.objects.create(
+            code='SAVE10', discount_percent=10, max_uses=1,
+            valid_from=now - timedelta(days=1), valid_to=now + timedelta(days=1),
+        )
+        self.order = Order.objects.create(
+            full_name='Buyer', phone='254712345678',
+            county='Nairobi', town='T', street='S',
+            coupon=self.coupon, discount_percent=10,
+            discount_amount=Decimal('300.00'),
+        )
+        OrderItem.objects.create(
+            order=self.order, product=self.product,
+            price=self.product.price, quantity=2,
+        )
+        MpesaPayment.objects.create(
+            order=self.order, phone=self.order.phone,
+            amount=self.order.get_mpesa_amount(), checkout_request_id='ws_CO_C',
+        )
+
+    def post_callback(self):
+        body = {'Body': {'stkCallback': {
+            'MerchantRequestID': '1-2', 'CheckoutRequestID': 'ws_CO_C',
+            'ResultCode': 0, 'ResultDesc': 'ok',
+            'CallbackMetadata': {'Item': [
+                {'Name': 'MpesaReceiptNumber', 'Value': 'SFG4TESTXY'},
+            ]},
+        }}}
+        return self.client.post(
+            f'/payments/callback/{CALLBACK_TOKEN}/',
+            data=json.dumps(body), content_type='application/json',
+        )
+
+    def test_paying_counts_one_redemption(self):
+        self.post_callback()
+        self.coupon.refresh_from_db()
+        self.assertEqual(self.coupon.times_used, 1)
+        self.assertFalse(self.coupon.is_valid)   # spent
+
+    def test_replayed_callback_counts_the_redemption_once(self):
+        self.post_callback()
+        self.post_callback()
+        self.post_callback()
+        self.coupon.refresh_from_db()
+        self.assertEqual(self.coupon.times_used, 1)
+
+    def test_a_failed_payment_does_not_burn_a_use(self):
+        body = {'Body': {'stkCallback': {
+            'MerchantRequestID': '1-2', 'CheckoutRequestID': 'ws_CO_C',
+            'ResultCode': 1032, 'ResultDesc': 'Request cancelled by user',
+        }}}
+        self.client.post(
+            f'/payments/callback/{CALLBACK_TOKEN}/',
+            data=json.dumps(body), content_type='application/json',
+        )
+        self.coupon.refresh_from_db()
+        self.assertEqual(self.coupon.times_used, 0)
 
 
 @override_settings(ALLOWED_HOSTS=['testserver'])

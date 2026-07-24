@@ -27,6 +27,15 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
-    list_display = ['code', 'discount_percent', 'valid_from', 'valid_to', 'active']
-    list_filter = ['active']
+    list_display = [
+        'code', 'discount_percent', 'uses_display',
+        'valid_from', 'valid_to', 'active',
+    ]
+    list_filter = ['active', 'categories']
     search_fields = ['code']
+    filter_horizontal = ['categories']
+    readonly_fields = ['times_used']
+
+    @admin.display(description='uses')
+    def uses_display(self, obj):
+        return f'{obj.times_used} / {obj.max_uses}'

@@ -74,10 +74,17 @@ class CouponApplyForm(forms.Form):
         code = self.cleaned_data['code'].strip()
         now = timezone.now()
         try:
-            self.coupon = Coupon.objects.get(
+            coupon = Coupon.objects.get(
                 code__iexact=code, active=True,
                 valid_from__lte=now, valid_to__gte=now,
             )
         except Coupon.DoesNotExist:
             raise forms.ValidationError('That coupon is not valid.')
+
+        # A code that has been redeemed its maximum number of times is spent,
+        # even though it is still active and inside its date window.
+        if coupon.times_used >= coupon.max_uses:
+            raise forms.ValidationError('That coupon has already been used up.')
+
+        self.coupon = coupon
         return code
