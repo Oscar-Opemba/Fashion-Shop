@@ -46,14 +46,23 @@ def start(request, order_id):
         messages.error(request, f'Could not reach M-Pesa: {exc}')
         return redirect('payments:failed', order_id=order.pk)
 
+    # Key on the order, not the CheckoutRequestID. Each STK push returns a
+    # fresh CheckoutRequestID, and order is a OneToOne, so a retry must UPDATE
+    # the existing row (with the new id) rather than insert a second payment —
+    # otherwise it hits the unique constraint on order_id. Stale result fields
+    # from a previous failed attempt are cleared so the callback/poll for the
+    # new attempt start from a clean PENDING state.
     payment, _ = MpesaPayment.objects.update_or_create(
-        checkout_request_id=response['CheckoutRequestID'],
+        order=order,
         defaults={
-            'order': order,
             'phone': order.phone,
             'amount': order.get_mpesa_amount(),
+            'checkout_request_id': response['CheckoutRequestID'],
             'merchant_request_id': response.get('MerchantRequestID', ''),
             'status': MpesaPayment.Status.PENDING,
+            'mpesa_receipt': '',
+            'result_code': '',
+            'result_desc': '',
         },
     )
 

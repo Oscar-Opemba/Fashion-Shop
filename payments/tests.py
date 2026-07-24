@@ -1,5 +1,6 @@
 import json
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 
@@ -182,3 +183,54 @@ class GuestOrderAccessTests(TestCase):
                 self.assertEqual(
                     self.client.get(f'/payments/waiting/{order_id}/').status_code, 200
                 )
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class PaymentRetryTests(TestCase):
+    def setUp(self):
+        category = Category.objects.create(name='Shirts')
+        self.product = Product.objects.create(
+            category=category, name='Test Shirt', price=Decimal('1500.00'), stock=10,
+        )
+
+    def place_order(self):
+        self.client.post(f'/cart/add/{self.product.id}/', {'quantity': 1})
+        response = self.client.post('/orders/checkout/', {
+            'full_name': 'Guest', 'phone': '0722000111',
+            'county': 'Nairobi', 'town': 'T', 'street': 'S',
+        })
+        return int(response['Location'].rstrip('/').split('/')[-1])
+
+    def test_retrying_a_payment_reuses_the_row_instead_of_crashing(self):
+        """Regression: start() keyed update_or_create on CheckoutRequestID, but
+        order is OneToOne. A retry gets a fresh CheckoutRequestID, so the lookup
+        missed and it tried to INSERT a second payment for the same order —
+        `UNIQUE constraint failed: payments_mpesapayment.order_id` (a 500)."""
+        order_id = self.place_order()
+
+        # First attempt lands, then fails (user cancels, or a non-zero callback).
+        with patch('payments.views.stk_push', return_value={
+            'CheckoutRequestID': 'ws_CO_FIRST', 'MerchantRequestID': 'm-1',
+        }):
+            self.client.get(f'/payments/start/{order_id}/')
+        MpesaPayment.objects.filter(order_id=order_id).update(
+            status=MpesaPayment.Status.FAILED,
+            result_code='1032', result_desc='Request cancelled by user',
+        )
+
+        # Retry: a fresh CheckoutRequestID must UPDATE the same row, not insert.
+        with patch('payments.views.stk_push', return_value={
+            'CheckoutRequestID': 'ws_CO_SECOND', 'MerchantRequestID': 'm-2',
+        }):
+            response = self.client.get(f'/payments/start/{order_id}/')
+
+        self.assertEqual(response.status_code, 302)
+        payments = MpesaPayment.objects.filter(order_id=order_id)
+        self.assertEqual(payments.count(), 1)
+
+        payment = payments.get()
+        self.assertEqual(payment.checkout_request_id, 'ws_CO_SECOND')
+        # Stale result of the failed attempt is cleared back to a clean PENDING.
+        self.assertEqual(payment.status, MpesaPayment.Status.PENDING)
+        self.assertEqual(payment.result_code, '')
+        self.assertEqual(payment.result_desc, '')
