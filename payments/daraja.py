@@ -20,6 +20,12 @@ BASE_URLS = {
     'production': 'https://api.safaricom.co.ke',
 }
 
+# Daraja names the transaction type after the kind of shortcode being paid.
+TRANSACTION_TYPES = {
+    'paybill': 'CustomerPayBillOnline',
+    'till': 'CustomerBuyGoodsOnline',
+}
+
 TOKEN_CACHE_KEY = 'mpesa:access_token'
 # Daraja tokens last ~3599s. Expiring ours early avoids racing the boundary.
 TOKEN_CACHE_SECONDS = 3300
@@ -33,6 +39,19 @@ class DarajaError(Exception):
 
 def base_url():
     return BASE_URLS.get(settings.MPESA_ENV, BASE_URLS['sandbox'])
+
+
+def transaction_type():
+    """Daraja's name for the kind of shortcode being paid.
+
+    An unrecognised MPESA_SHORTCODE_TYPE falls back to Paybill rather than
+    raising: that is what the sandbox shortcode is, so a typo degrades to the
+    common case instead of taking checkout down.
+    """
+    return TRANSACTION_TYPES.get(
+        str(settings.MPESA_SHORTCODE_TYPE).strip().lower(),
+        TRANSACTION_TYPES['paybill'],
+    )
 
 
 def normalise_phone(raw):
@@ -131,10 +150,10 @@ def stk_push(phone, amount, account_reference, description=None):
         'BusinessShortCode': settings.MPESA_SHORTCODE,
         'Password': _password(timestamp),
         'Timestamp': timestamp,
-        'TransactionType': 'CustomerPayBillOnline',
+        'TransactionType': transaction_type(),
         'Amount': int(amount),
         'PartyA': msisdn,
-        'PartyB': settings.MPESA_SHORTCODE,
+        'PartyB': settings.MPESA_PARTY_B,
         'PhoneNumber': msisdn,
         'CallBackURL': callback_url(),
         # Daraja caps these two fields; over-long values are rejected outright.

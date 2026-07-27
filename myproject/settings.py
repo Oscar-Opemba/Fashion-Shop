@@ -356,6 +356,17 @@ MPESA_CONSUMER_SECRET = env('MPESA_CONSUMER_SECRET', '')
 MPESA_SHORTCODE = env('MPESA_SHORTCODE', '174379')
 MPESA_PASSKEY = env('MPESA_PASSKEY', '')
 
+# Safaricom issues two kinds of shortcode and they are not interchangeable: a
+# Paybill takes CustomerPayBillOnline, a Buy Goods till takes
+# CustomerBuyGoodsOnline. Sending the wrong one is rejected, so which you have
+# has to be stated rather than guessed. The sandbox shortcode is a Paybill.
+MPESA_SHORTCODE_TYPE = env('MPESA_SHORTCODE_TYPE', 'paybill')
+
+# Who actually receives the money. For a Paybill this is the shortcode itself.
+# For Buy Goods the two differ: BusinessShortCode is the head office number
+# while PartyB is the till, so the till goes here.
+MPESA_PARTY_B = env('MPESA_PARTY_B', '') or MPESA_SHORTCODE
+
 # Public https base url Safaricom can reach (ngrok during development).
 MPESA_CALLBACK_BASE_URL = env('MPESA_CALLBACK_BASE_URL', '')
 

@@ -9,7 +9,7 @@ from django.utils import timezone
 from shop.models import Category, Product
 from orders.models import Coupon, Order, OrderItem
 
-from .daraja import normalise_phone
+from .daraja import normalise_phone, stk_push
 from .models import MpesaPayment
 
 CALLBACK_TOKEN = 'test-token'
@@ -29,6 +29,55 @@ class PhoneNormalisationTests(TestCase):
         for raw in ('07123', '0812345678', 'abc', '', None):
             with self.subTest(raw=raw):
                 self.assertIsNone(normalise_phone(raw))
+
+
+@override_settings(
+    MPESA_PASSKEY='test-passkey',
+    MPESA_CALLBACK_BASE_URL='https://example.com',
+    MPESA_CALLBACK_TOKEN=CALLBACK_TOKEN,
+)
+class StkPushPayloadTests(TestCase):
+    """Who gets paid, and under which transaction type.
+
+    A Paybill and a Buy Goods till are not interchangeable: Daraja rejects the
+    wrong TransactionType, and a till splits the shortcode in two — the head
+    office number identifies the request while the till receives the money.
+    Getting this wrong sends real money to the wrong place, so it is pinned.
+    """
+
+    def push(self):
+        ok = type('R', (), {
+            'status_code': 200,
+            'json': lambda self: {'ResponseCode': '0', 'CheckoutRequestID': 'ws_1'},
+        })()
+        with patch('payments.daraja.get_access_token', return_value='tok'), \
+                patch('payments.daraja.requests.post', return_value=ok) as post:
+            stk_push('0712345678', 100, 'ORDER1')
+        return post.call_args.kwargs['json']
+
+    @override_settings(MPESA_SHORTCODE='174379', MPESA_SHORTCODE_TYPE='paybill',
+                       MPESA_PARTY_B='174379')
+    def test_paybill_is_paid_as_paybill(self):
+        payload = self.push()
+        self.assertEqual(payload['TransactionType'], 'CustomerPayBillOnline')
+        self.assertEqual(payload['BusinessShortCode'], '174379')
+        self.assertEqual(payload['PartyB'], '174379')
+
+    @override_settings(MPESA_SHORTCODE='555000', MPESA_SHORTCODE_TYPE='till',
+                       MPESA_PARTY_B='555111')
+    def test_till_is_paid_as_buy_goods_and_the_till_receives(self):
+        payload = self.push()
+        self.assertEqual(payload['TransactionType'], 'CustomerBuyGoodsOnline')
+        # The head office number identifies the request...
+        self.assertEqual(payload['BusinessShortCode'], '555000')
+        # ...but the money lands in the till.
+        self.assertEqual(payload['PartyB'], '555111')
+
+    @override_settings(MPESA_SHORTCODE='174379', MPESA_SHORTCODE_TYPE='nonsense',
+                       MPESA_PARTY_B='174379')
+    def test_an_unrecognised_type_falls_back_to_paybill(self):
+        """A typo should degrade to the common case, not break checkout."""
+        self.assertEqual(self.push()['TransactionType'], 'CustomerPayBillOnline')
 
 
 @override_settings(ALLOWED_HOSTS=['testserver'], MPESA_CALLBACK_TOKEN=CALLBACK_TOKEN)

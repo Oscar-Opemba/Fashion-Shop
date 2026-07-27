@@ -83,12 +83,47 @@ Sandbox host `https://sandbox.safaricom.co.ke`, production
 | `MPESA_ENV` | `sandbox` or `production` (defaults to sandbox) |
 | `MPESA_CONSUMER_KEY` / `_SECRET` | OAuth credentials from the Daraja portal app |
 | `MPESA_SHORTCODE` | Business shortcode (`174379` in sandbox) |
+| `MPESA_SHORTCODE_TYPE` | `paybill` or `till` — picks the transaction type |
+| `MPESA_PARTY_B` | Who receives the money; blank means "same as shortcode" |
 | `MPESA_PASSKEY` | Used with shortcode + timestamp to build the request password |
 | `MPESA_CALLBACK_BASE_URL` | Public https base Safaricom posts to (tunnel in dev) |
 | `MPESA_CALLBACK_TOKEN` | Unguessable segment in the callback path |
 | `MPESA_TRANSACTION_DESC` | Default transaction description |
 
 **Switching sandbox → production is a `.env` edit, never a code change.**
+
+## Going live — where the money actually goes
+
+In sandbox `PartyB` is `174379`, Safaricom's shared public test Paybill. Every
+Daraja developer pushes to that same number, which is why a sandbox receipt
+looks real but no shillings move — not even when a real handset confirms the
+prompt.
+
+**STK Push always pays a shortcode, never a phone number.** There is no
+configuration that routes checkout takings to a personal `07xx` line; Daraja
+requires a Paybill or Buy Goods till for `PartyB`. A personal number only
+enters the picture further downstream, when the business account is settled.
+
+Going live is three steps, and only the last one touches this repo:
+
+1. **Get an M-Pesa business account** from Safaricom — Paybill or Buy Goods
+   till. Business registration paperwork, not a portal click.
+2. **Apply to Go Live** on the Daraja portal. This issues *production*
+   Consumer Key, Secret and Passkey bound to that shortcode. Sandbox
+   credentials do not carry over.
+3. **Edit `.env`.** `.env.example` carries the full block, commented out.
+
+The Paybill/till distinction is the one that bites, because the two take
+different `TransactionType` values and a till splits the shortcode in two:
+
+| | `MPESA_SHORTCODE` | `MPESA_PARTY_B` | `TransactionType` sent |
+|---|---|---|---|
+| Paybill | the paybill number | blank (defaults to shortcode) | `CustomerPayBillOnline` |
+| Buy Goods | head office / store number | the till number | `CustomerBuyGoodsOnline` |
+
+`daraja.transaction_type()` maps `MPESA_SHORTCODE_TYPE` to the right value and
+falls back to Paybill on an unrecognised setting — a typo degrades to the
+common case rather than taking checkout down.
 
 ## Development callback tunnel
 
