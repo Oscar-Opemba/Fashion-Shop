@@ -104,16 +104,19 @@ its own does nothing until the workers restart.
 ## 6. Check that Daraja is reachable
 
 Free accounts route outbound traffic through a proxy, so confirm the
-allowlist really covers Safaricom before demoing. In a Bash console:
+allowlist really covers Safaricom before demoing. This asks the live site's
+own code to fetch a real token, which tests the proxy, the allowlist and your
+credentials in one go:
 
 ```bash
-curl -sS -o /dev/null -w '%{http_code}\n' https://sandbox.safaricom.co.ke/oauth/v1/generate
+source ~/.virtualenvs/fashionshop/bin/activate
+cd ~/Fashion-Shop
+python manage.py shell -c "from payments.daraja import get_access_token; print(get_access_token())"
 ```
 
-A `400` or `401` is **success** — the request reached Safaricom and was
-rejected for having no credentials. A hang, a proxy error, or `403 Forbidden`
-from a page mentioning the allowlist means it is blocked; the fix is a paid
-account, which has unrestricted outbound access.
+A 28-character token means everything is wired up. A `DarajaError` naming the
+consumer key means the `.env` values did not take; a hang or a proxy error
+means the host is blocked, and the fix is a paid account.
 
 Then run a real STK push against a sandbox test number through the site.
 
@@ -121,9 +124,10 @@ Then run a real STK push against a sandbox test number through the site.
 
 ## Free-tier limits worth planning around
 
-- **Your site expires every 3 months.** The Web tab shows a "Run until 3
-  months from today" button; click it or the site quietly goes offline. Set a
-  calendar reminder.
+- **Your site expires every month.** The Web tab shows a "Run until 1 month
+  from today" button; click it or the site quietly goes offline. PythonAnywhere
+  emails a warning a week before. Set a calendar reminder anyway — this is the
+  single most likely reason the site is down when you next need it.
 - **100 CPU-seconds per day.** Plenty for browsing and demos. Exhausting it
   does not take the site down, it just makes it slow.
 - **512 MB disk.** This deployment uses roughly 160 MB (134 MB virtualenv,
