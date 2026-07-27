@@ -256,6 +256,54 @@ class GuestOrderAccessTests(TestCase):
 
 
 @override_settings(ALLOWED_HOSTS=['testserver'])
+class OutcomePageRenderTests(TestCase):
+    """Every payment outcome page must actually render.
+
+    Regression: success.html reversed a 'catalog:' url that no app declares,
+    so the page a paying customer lands on raised NoReverseMatch. Nothing
+    caught it because the sandbox cannot complete a payment without a human
+    entering a PIN, so this template was never rendered in a test or by hand.
+    """
+
+    def setUp(self):
+        category = Category.objects.create(name='Shirts')
+        self.product = Product.objects.create(
+            category=category, name='Test Shirt', price=Decimal('1500.00'), stock=10
+        )
+
+    def order_at(self, status, paid):
+        self.client.post(f'/cart/add/{self.product.id}/', {'quantity': 1})
+        response = self.client.post('/orders/checkout/', {
+            'full_name': 'Guest', 'phone': '0722000111',
+            'county': 'Nairobi', 'town': 'T', 'street': 'S',
+        })
+        order_id = int(response['Location'].rstrip('/').split('/')[-1])
+
+        order = Order.objects.get(pk=order_id)
+        order.paid = paid
+        order.save(update_fields=['paid'])
+
+        MpesaPayment.objects.create(
+            order=order, phone='254722000111', amount=1500,
+            checkout_request_id=f'ws_{order_id}', status=status,
+            mpesa_receipt='TEST12345' if paid else '',
+        )
+        return order_id
+
+    def test_success_page_renders_for_a_paid_order(self):
+        order_id = self.order_at('success', paid=True)
+        self.assertEqual(
+            self.client.get(f'/payments/success/{order_id}/').status_code, 200
+        )
+
+    def test_failed_page_renders(self):
+        order_id = self.order_at('failed', paid=False)
+        self.assertEqual(
+            self.client.get(f'/payments/failed/{order_id}/').status_code, 200
+        )
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
 class PaymentRetryTests(TestCase):
     def setUp(self):
         category = Category.objects.create(name='Shirts')
