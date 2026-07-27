@@ -2213,6 +2213,19 @@ It is off in development because the dev server is plain http and these would
 make it unusable. Nothing to remember at deploy time — flipping `DEBUG` turns
 them all on.
 
+For an actual host to put this on, `DEPLOY.md` walks through PythonAnywhere's
+free tier step by step. It is worth a look even if you deploy elsewhere,
+because it is where the M-Pesa story finally closes: the free tier hands you a
+permanent https address, so the ngrok tunnel from Part 10 — the one you had to
+restart, and re-paste into `.env`, every single session — stops being part of
+your life. The callback URL becomes a fixed thing you set once.
+
+Two items in the checklist above bend on that host. SQLite stays, because
+PythonAnywhere's free tier is a demo environment and the traffic never
+justifies Postgres. And `MPESA_ENV` stays on `sandbox`, since going to
+production needs Safaricom to approve a real shortcode, which is a business
+process rather than a deployment step.
+
 ---
 
 ## The ideas worth carrying to your next project
