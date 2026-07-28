@@ -73,7 +73,7 @@ Fashion-Shop/
 │   ├── forms.py                       90   OrderCreateForm, CouponApplyForm
 │   ├── admin.py                       41   Order + Coupon admin
 │   ├── urls.py                        13   app_name='orders'
-│   ├── tests.py                      217
+│   ├── tests.py                      273
 │   └── migrations/                         0001, 0002 (drops payment fields),
 │                                           0003 (puts them back)
 │
@@ -85,7 +85,7 @@ Fashion-Shop/
 │   │                                       success, failed, retry
 │   ├── admin.py                       22   read-only — mirrors Daraja
 │   ├── urls.py                        18   app_name='payments'
-│   ├── tests.py                      184
+│   ├── tests.py                      472
 │   └── migrations/0001_initial.py
 │
 ├── accounts/                               ── USER PROFILES ──
@@ -94,10 +94,10 @@ Fashion-Shop/
 │   ├── forms.py                       51   ProfileForm, AddressForm
 │   ├── admin.py                       16
 │   ├── urls.py                        12   app_name='accounts'
-│   ├── tests.py                       92
+│   ├── tests.py                      260
 │   └── migrations/0001_initial.py
 │
-├── templates/                              ── 36 FILES, 2,241 LINES ──
+├── templates/                              ── 40 FILES, 2,347 LINES ──
 │   ├── base.html                      59   the skeleton every page extends
 │   │
 │   ├── includes/                           8 reusable partials
@@ -143,9 +143,13 @@ Fashion-Shop/
 │   │   └── address_confirm_delete.html 24
 │   │
 │   ├── account/                            ALLAUTH overrides (note: singular)
+│   │   ├── base_entrance.html         17   shared frame — all six extend it
 │   │   ├── login.html                 33
+│   │   ├── password_reset_from_key.html 34 set a new password / dead link
 │   │   ├── signup.html                31
-│   │   └── base_entrance.html         17   shared frame for login/signup
+│   │   ├── password_reset.html        31   ask for a link
+│   │   ├── password_reset_done.html   21   check your email
+│   │   └── password_reset_from_key_done.html 14
 │   │
 │   └── socialaccount/                      allauth social overrides
 │       ├── signup.html                32
@@ -516,7 +520,7 @@ Use a context processor instead.
 ### Verified working
 
 `manage.py check` → no issues. 0 unapplied migrations, 0 pending model changes.
-95 tests pass. Route sweep: `/`, `/about/`, `/contact/`, `/shop/`,
+123 tests pass. Route sweep: `/`, `/about/`, `/contact/`, `/shop/`,
 `/shop/<slug>/`, `/cart/`, `/accounts/login/`, `/accounts/signup/` → **200**;
 `/orders/`, `/accounts/profile/`, `/admin/` → **302** to login (correct —
 login-gated); `/shop/manage/` → **403** for a signed-in non-staff user.
@@ -533,7 +537,7 @@ nothing with `migrate` then `seed`; `seed` is idempotent and safe to re-run.
 
 | Gap | Impact |
 |---|---|
-| `MPESA_*` keys unset | checkout runs to the payment step and then lands on the failure page with the reason. The rest of the site is unaffected. Needs Daraja credentials and a public https callback (`ngrok http 8000`) |
+| `MPESA_*` keys unset in a fresh clone | checkout runs to the payment step and then lands on the failure page with the reason. The rest of the site is unaffected. Needs Daraja credentials and a public https callback (`ngrok http 8000` locally; on PythonAnywhere the setup script derives it). The flow itself is proven — a sandbox STK push, callback and paid order were driven end to end on the live host |
 | Only one product has a gallery | the theme photographed just one item from several angles; the other 19 fall back to their single shot |
 | Size/colour are not variants | stock is per product, so the cart does not record which size was picked |
 | Shoes carry no sizes | they need a numeric run; XS–4XL would be nonsense on a sneaker |
@@ -544,14 +548,14 @@ nothing with `migrate` then `seed`; `seed` is idempotent and safe to re-run.
 
 ### Testing
 
-`python manage.py test` runs **95 tests** in under 3 seconds:
+`python manage.py test` runs **123 tests** in about 4.5 seconds:
 
 | App | Tests | Covers |
 |---|---|---|
 | `shop` | 35 | listing, search, price bounds, size/colour facets, detail access, seed integrity, staff CRUD access + PROTECT |
-| `orders` | 24 | checkout, stock timing, totals, coupons, phone normalisation, order ownership |
-| `payments` | 14 | phone parsing, STK push, callback idempotency, token rejection |
-| `accounts` | 10 | profile signal, one-default-address rule, cross-user access |
+| `orders` | 29 | checkout, stock timing, totals, coupons, phone normalisation, order ownership |
+| `payments` | 26 | phone parsing, STK push shortcode types, callback idempotency, coupon redemption, token rejection, guest order access, status polling, retry |
+| `accounts` | 21 | profile signal, one-default-address rule, cross-user access, signup/login/logout, password reset end to end |
 | `core` | 8 | home page, deal of the week, contact form |
 | `cart` | 4 | session serialisation, stock capping, captured prices |
 

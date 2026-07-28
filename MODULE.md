@@ -2061,6 +2061,102 @@ client ID → Web application; redirect URI
 <https://developers.facebook.com/apps> (add the Facebook Login product;
 Facebook requires https, so use the ngrok host when testing locally).
 
+### 11.5 Theming the entrance pages
+
+allauth ships its pages unstyled. Overriding them is the trick from 11.1 —
+put a file at the same path under `templates/account/` and `DIRS` wins — but
+doing that once per page would mean six copies of the same card markup. One
+shared skeleton instead:
+
+```html
+{# templates/account/base_entrance.html #}
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="checkout spad">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-5 col-md-8">
+        <div class="checkout__form auth-card">
+          <h4>{% block auth_title %}{% endblock %}</h4>
+          {% block auth_content %}{% endblock %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+```
+
+Every entrance page then declares only what makes it different:
+
+```html
+{% extends 'account/base_entrance.html' %}
+
+{% block title %}Reset password{% endblock %}     {# browser tab #}
+{% block auth_title %}Reset your password{% endblock %}   {# card heading #}
+
+{% block auth_content %}
+  ...the form...
+{% endblock %}
+```
+
+That is `login.html`, `signup.html`, and the four reset pages — the whole
+folder is one skeleton plus six short files.
+
+### 11.6 The password reset flow
+
+Four pages, because a reset is four steps with an email in the middle:
+
+| Step | Template | What the shopper sees |
+|---|---|---|
+| Ask | `password_reset.html` | enter your email |
+| Sent | `password_reset_done.html` | check your inbox |
+| Set | `password_reset_from_key.html` | choose a new password |
+| Done | `password_reset_from_key_done.html` | changed, sign in |
+
+Two details are worth copying rather than inventing.
+
+**An unknown email must look identical to a known one.** allauth already does
+this — it renders the "check your inbox" page either way. If it said "no such
+account", the form would be a free tool for checking whether an address has
+shopped here.
+
+**A dead link needs somewhere to go.** allauth does not 404 a used or expired
+key; it renders the same template with `token_fail` set, so you branch:
+
+```html
+{% if token_fail %}
+    <p>Reset links can only be used once, and they expire. Ask for a
+       fresh one and it will work.</p>
+    <a href="{% url 'account_reset_password' %}">Send me a new link</a>
+{% else %}
+    <form method="post" action="{{ action_url }}">...</form>
+{% endif %}
+```
+
+Without that branch the shopper hits a blank page and has no idea the fix is
+simply to ask again.
+
+Note `action="{{ action_url }}"` on that form. The reset key arrives in the
+URL, and allauth immediately redirects to a masked URL holding it in the
+session. `action_url` is the address the form must post back to; hardcoding
+the current path breaks the flow.
+
+`EMAIL_BACKEND` is the console backend in development, so the mail — link and
+all — prints straight into the terminal running `runserver`. You can walk the
+entire flow with no SMTP server configured.
+
+`PasswordResetTests` in `accounts/tests.py` walks all four steps against a
+real emailed link: it asserts our templates render and not allauth's, that an
+unknown address is indistinguishable, that the link works once, that a second
+use fails, and that the new password signs in while the old one does not.
+
+Still unthemed, and known: `/accounts/logout/` and
+`/accounts/password/change/` extend allauth's `account/base.html`, which this
+project does not override, so they render bare. Same fix as above when you
+want them.
+
 ---
 
 ## Part 12 — Tests
@@ -2069,7 +2165,7 @@ Facebook requires https, so use the ngrok host when testing locally).
 python manage.py test
 ```
 ```
-Ran 118 tests in 2.459s
+Ran 123 tests in 4.537s
 
 OK
 ```
@@ -2078,8 +2174,8 @@ OK
 |---|---|---|
 | `shop` | 35 | listing, search, price bounds, size/colour facets, detail access, seed integrity, staff CRUD |
 | `orders` | 29 | checkout, stock timing, totals, coupons (category scoping + usage cap), phone normalisation, order ownership |
-| `payments` | 21 | phone parsing, STK push, callback idempotency, coupon redemption, token rejection |
-| `accounts` | 21 | profile signal, one-default-address rule, cross-user access |
+| `payments` | 26 | phone parsing, STK push shortcode types, callback idempotency, coupon redemption, token rejection, guest order access, status polling, retry |
+| `accounts` | 21 | profile signal, one-default-address rule, cross-user access, signup/login/logout, password reset end to end |
 | `core` | 8 | home page, deal of the week, contact form |
 | `cart` | 4 | session serialisation, stock capping, captured prices |
 
@@ -2104,7 +2200,7 @@ if 'test' in sys.argv:
 ```
 
 Django's default hasher is deliberately slow — correct in production, and it
-was costing this suite most of its runtime (~31s down to under 2s). Tests never
+is costing this suite most of its runtime (56s down to 4.5s). Tests never
 assert on hash strength. **This applies only under `manage.py test`.**
 
 Run a subset:
