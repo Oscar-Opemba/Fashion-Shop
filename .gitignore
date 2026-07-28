@@ -38,3 +38,6 @@ demo_payment.py
 
 # Local helper — restart tunnel + server (presentation)
 restart_tunnel.sh
+
+# Deploy bundle — database + uploads, rebuilt on demand (DEPLOY.md step 1)
+shopdata.tar.gz
