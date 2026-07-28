@@ -60,10 +60,23 @@ Then set, in the sections down that page:
 
 ## 4. WSGI file and static mappings
 
-Still on the Web tab, click the **WSGI configuration file** link. Delete
-everything in it and paste the contents of
-`deploy/pythonanywhere_wsgi.py`. Nothing in it needs editing — it derives its
-paths from your home directory. Save.
+PythonAnywhere imports a WSGI file it owns, at
+`/var/www/<username>_pythonanywhere_com_wsgi.py`, and it ships full of
+Hello-World boilerplate. Replace it with this repo's version. From the Bash
+console is the reliable way — the browser editor re-indents pasted Python:
+
+```bash
+cp ~/Fashion-Shop/deploy/pythonanywhere_wsgi.py \
+   /var/www/<username>_pythonanywhere_com_wsgi.py
+```
+
+(Or click the **WSGI configuration file** link on the Web tab, delete
+everything, and paste the file in by hand.) Nothing in it needs editing — it
+derives its paths from your home directory.
+
+If you had that file open in the browser editor while copying over it, close
+the tab without saving. A stale editor still holds the old Hello-World text
+and will put it back.
 
 In the **Static files** section add *both* mappings:
 
@@ -155,9 +168,10 @@ Then **Reload** on the Web tab. Code changes do not go live until you reload.
 
 ## Moving to `fashionshop.pythonanywhere.com`
 
-The planned address for the shop is **`fashionshop.pythonanywhere.com`**. As
-of this writing the live site is still `oscar.pythonanywhere.com`; the move
-below has not been carried out yet.
+**Done, 2026-07-28.** The shop is live at
+<https://fashionshop.pythonanywhere.com>. `oscar.pythonanywhere.com` is still
+up; retire it once you are happy with the new one. The record of how, kept
+because it is the same procedure for any future move:
 
 The address is your **account name**: free accounts get one web app at
 `<username>.pythonanywhere.com`, there is no field to name it something else,
@@ -165,10 +179,8 @@ and custom domains need a paid plan. PythonAnywhere also does not let you
 rename an account. So the move means a second account and a redeploy — there
 is no way to rename the existing one.
 
-**The username is `fashionshop`, with no hyphen.** PythonAnywhere usernames
-are alphanumeric, so `fashion-shop` is expected to be rejected at signup. The
-hyphenless spelling is the one to type into the form. Confirm the form accepts
-it before going further — the choice is permanent and unrenameable.
+**The username is `fashionshop`, with no hyphen** — PythonAnywhere usernames
+are alphanumeric. Pick carefully: the choice is permanent and unrenameable.
 
 Nothing in this repo has to change for the move.
 `deploy/pythonanywhere_setup.sh` derives the host from `$USER` and
@@ -176,10 +188,12 @@ Nothing in this repo has to change for the move.
 clone and the same script produce a correctly configured site under any
 account name.
 
-1. Sign up for a new free account as `fashionshop`.
-2. Rebuild the data bundle (step 1) and upload it to the new account.
-3. Run steps 2 to 4 unchanged.
-4. Paste the M-Pesa credentials into the new `.env` (step 5). The callback
+1. Sign up for a new free account as `fashionshop`. ✅
+2. Rebuild the data bundle (step 1) and upload it to the new account. ✅
+3. Run steps 2 to 4 unchanged. ✅ — the site loads, with product images.
+4. Paste the M-Pesa credentials into the new `.env` (step 5). ⬅ **you are
+   here.** The three keys are still blank, so checkout reaches the payment
+   step and then lands on the failure page. The callback
    URL is regenerated for the new host automatically — it is sent with each
    STK push rather than pre-registered with Safaricom — so Daraja starts
    posting to the new address with no extra work.
