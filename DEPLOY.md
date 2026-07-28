@@ -153,31 +153,40 @@ python manage.py collectstatic --noinput
 
 Then **Reload** on the Web tab. Code changes do not go live until you reload.
 
-## Changing the site's address
+## Moving to `fashionshop.pythonanywhere.com`
+
+The planned address for the shop is **`fashionshop.pythonanywhere.com`**. As
+of this writing the live site is still `oscar.pythonanywhere.com`; the move
+below has not been carried out yet.
 
 The address is your **account name**: free accounts get one web app at
 `<username>.pythonanywhere.com`, there is no field to name it something else,
 and custom domains need a paid plan. PythonAnywhere also does not let you
-rename an account. So moving from `oscar.pythonanywhere.com` to
-`fashionshop.pythonanywhere.com` means a second account and a redeploy.
+rename an account. So the move means a second account and a redeploy — there
+is no way to rename the existing one.
 
-Nothing in this repo has to change. `deploy/pythonanywhere_setup.sh` derives
-the host from `$USER` and `deploy/pythonanywhere_wsgi.py` derives its paths
-from `$HOME`, so the same clone and the same script produce a correctly
-configured site under any account name.
+**The username is `fashionshop`, with no hyphen.** PythonAnywhere usernames
+are alphanumeric, so `fashion-shop` is expected to be rejected at signup. The
+hyphenless spelling is the one to type into the form. Confirm the form accepts
+it before going further — the choice is permanent and unrenameable.
 
-1. Sign up for a new free account with the username you want. Check what the
-   signup form accepts — if hyphens are rejected, `fashionshop` works where
-   `fashion-shop` may not. Pick carefully: this is permanent.
+Nothing in this repo has to change for the move.
+`deploy/pythonanywhere_setup.sh` derives the host from `$USER` and
+`deploy/pythonanywhere_wsgi.py` derives its paths from `$HOME`, so the same
+clone and the same script produce a correctly configured site under any
+account name.
+
+1. Sign up for a new free account as `fashionshop`.
 2. Rebuild the data bundle (step 1) and upload it to the new account.
 3. Run steps 2 to 4 unchanged.
 4. Paste the M-Pesa credentials into the new `.env` (step 5). The callback
-   URL is regenerated for the new host automatically, so Daraja starts
+   URL is regenerated for the new host automatically — it is sent with each
+   STK push rather than pre-registered with Safaricom — so Daraja starts
    posting to the new address with no extra work.
 5. Verify with step 6, then change the admin password:
    `python manage.py changepassword admin`.
-6. Keep the old account running until the new one is confirmed working. Then
-   let it lapse, or delete its web app.
+6. Keep `oscar` running until `fashionshop` is confirmed working. Then let it
+   lapse, or delete its web app.
 
 Two things to weigh first: running two free accounts may not sit well with
 PythonAnywhere's terms, so check before relying on it; and the new account
