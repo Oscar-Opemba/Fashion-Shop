@@ -153,6 +153,38 @@ python manage.py collectstatic --noinput
 
 Then **Reload** on the Web tab. Code changes do not go live until you reload.
 
+## Changing the site's address
+
+The address is your **account name**: free accounts get one web app at
+`<username>.pythonanywhere.com`, there is no field to name it something else,
+and custom domains need a paid plan. PythonAnywhere also does not let you
+rename an account. So moving from `oscar.pythonanywhere.com` to
+`fashionshop.pythonanywhere.com` means a second account and a redeploy.
+
+Nothing in this repo has to change. `deploy/pythonanywhere_setup.sh` derives
+the host from `$USER` and `deploy/pythonanywhere_wsgi.py` derives its paths
+from `$HOME`, so the same clone and the same script produce a correctly
+configured site under any account name.
+
+1. Sign up for a new free account with the username you want. Check what the
+   signup form accepts — if hyphens are rejected, `fashionshop` works where
+   `fashion-shop` may not. Pick carefully: this is permanent.
+2. Rebuild the data bundle (step 1) and upload it to the new account.
+3. Run steps 2 to 4 unchanged.
+4. Paste the M-Pesa credentials into the new `.env` (step 5). The callback
+   URL is regenerated for the new host automatically, so Daraja starts
+   posting to the new address with no extra work.
+5. Verify with step 6, then change the admin password:
+   `python manage.py changepassword admin`.
+6. Keep the old account running until the new one is confirmed working. Then
+   let it lapse, or delete its web app.
+
+Two things to weigh first: running two free accounts may not sit well with
+PythonAnywhere's terms, so check before relying on it; and the new account
+brings its own monthly expiry date, so the reminder moves with it. Anything
+pointing at the old address — slides, course notes, bookmarks — stops working
+the moment you retire it.
+
 ## When something breaks
 
 The Web tab links three logs. The error log is the one that matters — a
