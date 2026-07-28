@@ -52,7 +52,7 @@ The stack:
 |---|---|---|
 | Language | Python 3.13 | what Django 6 wants |
 | Framework | Django 6.0.7 | batteries included: ORM, admin, auth, forms |
-| Database | SQLite | a single file, zero setup — swap for PostgreSQL later |
+| Database | SQLite | a single file, zero setup — and still what the live site runs |
 | Front end | MaleFashion HTML template (ThemeWagon) | a real designer's shop layout, free |
 | Payments | Safaricom Daraja, STK Push | the customers are in Kenya |
 | Accounts | django-allauth | email login + Google/Facebook without writing it |
@@ -2187,7 +2187,9 @@ is nearly always where the mistake is.
 - [ ] A fresh 50-character `SECRET_KEY`, never the dev one
 - [ ] `ALLOWED_HOSTS` set to the real domain
 - [ ] **Change the seeded `admin12345` password**
-- [ ] Move from SQLite to PostgreSQL
+- [ ] Decide about the database. SQLite is genuinely fine at this traffic, and
+      it is what the live site runs on. Moving to PostgreSQL — or MySQL — means
+      a paid host: PythonAnywhere's free tier offers neither (see `DEPLOY.md`)
 - [ ] `python manage.py collectstatic`, and let the web server serve `staticfiles/`
 - [ ] Real SMTP instead of the console email backend
 - [ ] `MPESA_ENV=production` with production Daraja credentials

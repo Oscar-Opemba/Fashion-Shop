@@ -134,7 +134,11 @@ Then run a real STK push against a sandbox test number through the site.
   20 MB collected static, the rest code and media).
 - **One web app**, on `<username>.pythonanywhere.com` only. No custom domains.
 - **SQLite is fine here** but only because traffic is low; it serialises
-  writes. MySQL is included free if you outgrow it.
+  writes. Outgrowing it means paying: free accounts created after 2026-01-15
+  cannot use MySQL at all (the Databases tab just offers an upgrade), and
+  Postgres has always been paid-only.
+- **No scheduled tasks** on free accounts created after 2026-01-15 either, so
+  nothing in this deployment can rely on cron.
 
 ## Deploying changes later
 
