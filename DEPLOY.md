@@ -95,14 +95,46 @@ Hit the green **Reload** button. The site should now load at
 ## 5. Add the M-Pesa credentials
 
 The setup script left them blank on purpose — secrets never go through git.
-Open `/home/<username>/Fashion-Shop/.env` (Files tab, or `nano` in the
-console) and fill in from your local `.env`:
+Exactly three values are missing, and they are the *only* thing a fresh
+deployment needs by hand:
 
 ```
-MPESA_CONSUMER_KEY=...
-MPESA_CONSUMER_SECRET=...
-MPESA_PASSKEY=...
+MPESA_CONSUMER_KEY=
+MPESA_CONSUMER_SECRET=
+MPESA_PASSKEY=
 ```
+
+Everything else in `.env` is already correct — generated for this host by the
+setup script. Do not copy a whole `.env` from another deployment over this
+one: it would drag the *old* host's `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`
+and `MPESA_CALLBACK_BASE_URL` with it, and the site would stop answering to
+its own name. Copy the three lines, nothing else.
+
+Where the values live, in order of convenience:
+
+1. Your local `~/projects/Fashion-Shop/.env` (git-ignored, which is why the
+   clone came up blank).
+2. Any earlier deployment's `~/Fashion-Shop/.env`.
+3. The Daraja portal at <https://developer.safaricom.co.ke> — the consumer
+   key and secret from your sandbox app's page, the passkey from the sandbox
+   test credentials for shortcode `174379`. Only needed if you are starting
+   from scratch or rotating them.
+
+To fill them in, either open `/home/<username>/Fashion-Shop/.env` in the
+Files-tab editor and paste each value after its `=`, or run this locally to
+print three ready-made commands with the values already substituted, and
+paste its output into a Bash console on the target account:
+
+```bash
+awk '/^MPESA_(CONSUMER_KEY|CONSUMER_SECRET|PASSKEY)=/ {
+       i = index($0, "="); k = substr($0, 1, i-1); v = substr($0, i+1)
+       printf "sed -i \"s|^%s=.*|%s=%s|\" ~/Fashion-Shop/.env\n", k, k, v
+     }' ~/projects/Fashion-Shop/.env
+```
+
+That output contains your live secrets in plain text — it belongs in a
+terminal and nowhere else. Not a chat window, not a commit, not a screenshot
+in the slides.
 
 `MPESA_CALLBACK_BASE_URL` is already set to your https host, so the callback
 Safaricom posts to is:
