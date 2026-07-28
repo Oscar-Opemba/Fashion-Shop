@@ -136,6 +136,35 @@ That output contains your live secrets in plain text — it belongs in a
 terminal and nowhere else. Not a chat window, not a commit, not a screenshot
 in the slides.
 
+### Or do it over the API
+
+PythonAnywhere has a REST API, and free accounts get it too. This does the
+whole step — copy the three values, verify them, reload the web app — without
+a console, and without the secrets ever appearing on screen:
+
+```bash
+python deploy/set_mpesa_secrets.py <username>
+```
+
+One-time setup: create a token at
+<https://www.pythonanywhere.com/account/#api_token> (a new account has none;
+the page shows a *Create a new API token* button), then save it where the
+script looks for it:
+
+```bash
+printf '%s' '<token>' > ~/.pythonanywhere_token && chmod 600 ~/.pythonanywhere_token
+```
+
+It prints key names, character counts and HTTP statuses — no secret values —
+so the output is safe to leave on screen. It rewrites only the three
+`MPESA_*` lines, reads the file back to confirm before restarting anything,
+and refuses to reload if what came back does not match. Skip to step 6 after
+it prints `reload : HTTP 200`; the reload below is already done.
+
+The same API is worth remembering for the rest of the deployment: files can
+be read and written at `/api/v0/user/<username>/files/path/<abs-path>`, and
+`POST /api/v0/user/<username>/webapps/<domain>/reload/` is the Reload button.
+
 `MPESA_CALLBACK_BASE_URL` is already set to your https host, so the callback
 Safaricom posts to is:
 
@@ -223,13 +252,13 @@ account name.
 1. Sign up for a new free account as `fashionshop`. ✅
 2. Rebuild the data bundle (step 1) and upload it to the new account. ✅
 3. Run steps 2 to 4 unchanged. ✅ — the site loads, with product images.
-4. Paste the M-Pesa credentials into the new `.env` (step 5). ⬅ **you are
-   here.** The three keys are still blank, so checkout reaches the payment
-   step and then lands on the failure page. The callback
-   URL is regenerated for the new host automatically — it is sent with each
-   STK push rather than pre-registered with Safaricom — so Daraja starts
-   posting to the new address with no extra work.
-5. Verify with step 6, then change the admin password:
+4. Paste the M-Pesa credentials into the new `.env` (step 5). ✅ — done over
+   the API. The callback URL needed no attention: it is regenerated for the
+   new host automatically, being sent with each STK push rather than
+   pre-registered with Safaricom, so Daraja posts to the new address by
+   itself.
+5. Verify with step 6 ✅ — `get_access_token()` returned a 28-character token
+   from the live host. Then change the admin password: ⬅ **you are here.**
    `python manage.py changepassword admin`.
 6. Keep `oscar` running until `fashionshop` is confirmed working. Then let it
    lapse, or delete its web app.
