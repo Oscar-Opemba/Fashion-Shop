@@ -448,10 +448,20 @@ exactly two things:
 1. Places where the theme uses a link (`<a>`) but a real shop needs a form POST
    — add to cart, sign out. A `<button>` inside a form has to be made to look
    like the theme's link.
-2. Pages the theme never shipped: order history, sign-in, the address book.
+2. Pages the theme never shipped: order history, sign-in, the address book,
+   the M-Pesa result pages, the 404.
 
 Every colour in it is lifted from the theme (`#111` text, `#e53637` accent), so
 the new pages look like they came in the same zip.
+
+> One failure mode to watch for, because it is silent. Rename a class in a
+> template and the css does not complain — the old rules just stop matching
+> anything, and the page renders with no styling at all while the dead rules
+> sit there looking maintained. That is exactly what happened to the three
+> payment pages: the markup moved from `order-placed` to `payment-state` and
+> the css kept the old names for weeks. Nothing errored. Nobody noticed until
+> someone actually paid and looked at the screen. When you rename a class,
+> grep the other side.
 
 ### 3.4 Wire the assets into a Django template
 

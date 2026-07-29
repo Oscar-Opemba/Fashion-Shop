@@ -349,20 +349,59 @@
 .status-pill--delivered { border-color: #19a319; color: #19a319; }
 .status-pill--cancelled { border-color: #e53637; color: #e53637; }
 
-.order-placed {
+/* ---------- Payment result pages ---------- */
+/* waiting.html, success.html and failed.html. These rules were written for an
+   earlier `order-placed` markup, and when the templates were rewritten around
+   `payment-state` the css kept the old names — so all three pages have been
+   rendering unstyled. Renamed here, and extended for the waiting page. */
+
+/* The 404 card and the payment card are the same shape — a bordered box alone
+   on the page — so the shared part is written once. */
+.error-page__card,
+.payment-state__card {
     border: 1px solid #e1e1e1;
-    padding: 40px 30px;
     text-align: center;
 }
 
-.order-placed__icon {
-    font-size: 54px;
-    color: #19a319;
+.error-page__lead,
+.payment-state__lead {
+    font-size: 16px;
+    line-height: 28px;
+    color: #6f6f6f;
+    max-width: 460px;
+    margin: 0 auto 30px;
+}
+
+.error-page__actions,
+.payment-state__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+}
+
+.payment-state__card { padding: 50px 30px; }
+
+/* A coloured edge is enough to tell the two outcomes apart at a glance,
+   without repainting the card. */
+.payment-state__card--success { border-top: 3px solid #19a319; }
+.payment-state__card--failed { border-top: 3px solid #e53637; }
+
+.payment-state__card h3 { font-size: 26px; margin-bottom: 16px; }
+
+.payment-state__icon {
     display: block;
+    font-size: 54px;
+    line-height: 1;
+    color: #19a319;
     margin-bottom: 16px;
 }
 
-.order-placed__meta {
+.payment-state__card--failed .payment-state__icon { color: #e53637; }
+
+.payment-state__lead strong { color: #111111; }
+
+.payment-state__meta {
     list-style: none;
     padding: 0;
     margin: 26px auto;
@@ -370,7 +409,7 @@
     text-align: left;
 }
 
-.order-placed__meta li {
+.payment-state__meta li {
     display: flex;
     justify-content: space-between;
     gap: 12px;
@@ -379,13 +418,60 @@
     border-bottom: 1px solid #e1e1e1;
 }
 
-.order-placed__meta li span { color: #111111; text-align: right; }
+.payment-state__meta li span { color: #111111; text-align: right; }
 
-.order-placed__actions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
+/* The waiting page. The shopper is looking at their phone, not at this, so
+   the spinner only has to say "still going" when they look back. */
+.payment-state__spinner {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 24px;
+    border: 3px solid #e1e1e1;
+    border-top-color: #e53637;
+    border-radius: 50%;
+    animation: payment-spin 1s linear infinite;
+}
+
+/* Polling has stopped. Freeze it — a spinner still turning would promise
+   that something is still happening. */
+.payment-state__spinner.is-done {
+    animation: none;
+    border-top-color: #e1e1e1;
+}
+
+@keyframes payment-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .payment-state__spinner { animation: none; }
+}
+
+.payment-state__status {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111111;
+    margin-bottom: 10px;
+}
+
+.payment-state__hint {
+    font-size: 14px;
+    color: #b7b7b7;
+    margin-bottom: 0;
+}
+
+/* On the failed page the hint comes before the buttons rather than last, and
+   without this they sit right on top of it. */
+.payment-state__hint + .payment-state__actions { margin-top: 26px; }
+
+.payment-state__retry { margin-top: 26px; }
+
+@media (max-width: 575px) {
+    .payment-state__card { padding: 40px 18px; }
+    .payment-state__card h3 { font-size: 21px; }
+    /* "Try again" is a POST, so it comes wrapped in a form — the form is the
+       flex item, and it has to stretch too or the button cannot. */
+    .payment-state__actions form,
+    .payment-state__actions .primary-btn,
+    .payment-state__actions .site-btn { width: 100%; }
 }
 
 /* ---------- Account ---------- */
@@ -697,11 +783,9 @@
    looks like the shop rather than a dead end. 500.html carries its own styles
    instead — see the comment at the top of that file. */
 
-.error-page__card {
-    padding: 50px 30px 60px;
-    border: 1px solid #e1e1e1;
-    text-align: center;
-}
+/* The border, the centring and the lead paragraph are shared with the payment
+   result card — see that section. Only what differs is here. */
+.error-page__card { padding: 50px 30px 60px; }
 
 .error-page__code {
     font-size: 64px;
@@ -713,14 +797,6 @@
 }
 
 .error-page__card h3 { font-size: 26px; margin-bottom: 18px; }
-
-.error-page__lead {
-    font-size: 16px;
-    line-height: 28px;
-    color: #6f6f6f;
-    max-width: 460px;
-    margin: 0 auto 30px;
-}
 
 /* Search is the fastest way out of a 404, so it sits above the buttons. */
 .error-page__search {
@@ -741,13 +817,6 @@
 .error-page__search input:focus { outline: none; border-color: #111111; }
 
 .error-page__search .site-btn { padding: 14px 24px; cursor: pointer; }
-
-.error-page__actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 14px;
-}
 
 .error-page__links {
     margin-top: 34px;
