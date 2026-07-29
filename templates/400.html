@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Bad request{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Bad request' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="error-page spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="error-page__card">
+                    <p class="error-page__code">400</p>
+                    <h3>We couldn't read that request</h3>
+
+                    <p class="error-page__lead">
+                        Something in the address or the form data wasn't what the shop
+                        expected. Loading the page fresh usually clears it.
+                    </p>
+
+                    <div class="error-page__actions">
+                        <a href="{% url 'core:home' %}" class="primary-btn">Back to home</a>
+                        <a href="{% url 'shop:product_list' %}" class="site-btn">Continue shopping</a>
+                    </div>
+
+                    <p class="error-page__hint">
+                        Keeps happening?
+                        <a href="{% url 'core:contact' %}">Tell us what you were doing</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

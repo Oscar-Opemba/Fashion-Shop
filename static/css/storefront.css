@@ -691,3 +691,88 @@
 .manage__form .form-error { margin: -18px 0 20px; }
 
 .manage__form .site-btn + .link-button { margin-left: 20px; }
+
+/* ---------- Error pages ---------- */
+/* 404/403/400 keep the header, footer and breadcrumb, so a wrong url still
+   looks like the shop rather than a dead end. 500.html carries its own styles
+   instead — see the comment at the top of that file. */
+
+.error-page__card {
+    padding: 50px 30px 60px;
+    border: 1px solid #e1e1e1;
+    text-align: center;
+}
+
+.error-page__code {
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 6px;
+    color: #e53637;
+    margin-bottom: 14px;
+}
+
+.error-page__card h3 { font-size: 26px; margin-bottom: 18px; }
+
+.error-page__lead {
+    font-size: 16px;
+    line-height: 28px;
+    color: #6f6f6f;
+    max-width: 460px;
+    margin: 0 auto 30px;
+}
+
+/* Search is the fastest way out of a 404, so it sits above the buttons. */
+.error-page__search {
+    display: flex;
+    max-width: 420px;
+    margin: 0 auto 30px;
+}
+
+.error-page__search input {
+    flex: 1;
+    height: 46px;
+    padding: 0 16px;
+    border: 1px solid #e1e1e1;
+    border-right: 0;
+    font-size: 14px;
+}
+
+.error-page__search input:focus { outline: none; border-color: #111111; }
+
+.error-page__search .site-btn { padding: 14px 24px; cursor: pointer; }
+
+.error-page__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+}
+
+.error-page__links {
+    margin-top: 34px;
+    font-size: 14px;
+    color: #b7b7b7;
+}
+
+.error-page__links span { margin-right: 10px; }
+
+.error-page__links a {
+    color: #111111;
+    margin: 0 10px;
+    border-bottom: 1px solid #e1e1e1;
+}
+
+.error-page__links a:hover { color: #e53637; }
+
+.error-page__hint { margin-top: 26px; font-size: 14px; color: #b7b7b7; }
+
+.error-page__hint a { color: #e53637; }
+
+@media (max-width: 575px) {
+    .error-page__card { padding: 40px 18px 45px; }
+    .error-page__code { font-size: 48px; }
+    .error-page__card h3 { font-size: 21px; }
+    .error-page__actions .primary-btn,
+    .error-page__actions .site-btn { width: 100%; }
+}

@@ -2287,6 +2287,8 @@ is nearly always where the mistake is.
       it is what the live site runs on. Moving to PostgreSQL — or MySQL — means
       a paid host: PythonAnywhere's free tier offers neither (see `DEPLOY.md`)
 - [ ] `python manage.py collectstatic`, and let the web server serve `staticfiles/`
+- [ ] `templates/404.html` and friends — with `DEBUG=False` a wrong url gets
+      Django's bare grey page unless you supply your own (below)
 - [ ] Real SMTP instead of the console email backend
 - [ ] `MPESA_ENV=production` with production Daraja credentials
 - [ ] `MPESA_CALLBACK_BASE_URL` on the real https domain, and a long random
@@ -2310,6 +2312,67 @@ if not DEBUG:
 It is off in development because the dev server is plain http and these would
 make it unusable. Nothing to remember at deploy time — flipping `DEBUG` turns
 them all on.
+
+### The error pages
+
+That same flip has a second effect people meet the hard way. With `DEBUG=True`
+a bad url gives you Django's yellow debug page listing every pattern it tried.
+With `DEBUG=False` that page is a security hole, so Django stops rendering it —
+and what a shopper gets instead is a bare grey `Not Found` with no header, no
+menu, no way back. It reads like the site fell over.
+
+The fix needs no view and no url. Django looks for four templates **by name, at
+the root of `templates/`**, and uses them for the matching status code:
+
+```
+templates/404.html        page not found
+templates/403.html        signed in, but not allowed
+templates/400.html        malformed request
+templates/500.html        our code raised
+templates/403_csrf.html   a POST failed the CSRF check
+```
+
+Put a file there and it is picked up. There is nothing to register.
+
+`404.html`, `403.html`, `400.html` and `403_csrf.html` all `{% extends
+'base.html' %}`, so the header, the category menu, the cart badge and the
+footer come along and a wrong address still looks like the shop. The 404 goes
+one step further and offers a way *out* — a search box, a link to the
+catalogue, the popular categories — because a dead end is a lost sale.
+
+**`500.html` is the exception, and the reason is worth understanding.** Django
+renders that one with an *empty context* and no `request`: by the time it runs,
+the request is what just crashed. Context processors never execute, so
+`base.html` would try to render a cart that is not there — and the thing that
+broke is often the database, which is exactly what `nav_categories` needs. So
+`500.html` extends nothing. It is one self-contained file with its own inline
+css, no javascript and no queries, borrowing only the theme's colours. Anything
+it depends on is one more thing that can fail at the worst moment.
+
+Seeing them locally has one trap. `DEBUG=False` in your `.env` does show the
+real pages — but it also switches on `SECURE_SSL_REDIRECT` from the block
+above, and the dev server speaks plain http, so every request bounces to an
+https address that answers nowhere. It also stops serving `static/`. So if you
+want to look at the pages in a browser, turn both back off for the run:
+
+```bash
+# settings_local.py, beside myproject/settings.py, git-ignored
+from myproject.settings import *
+SECURE_SSL_REDIRECT = False
+SECURE_HSTS_SECONDS = 0
+```
+
+```bash
+DEBUG=False python manage.py runserver --insecure --settings=settings_local
+```
+
+The cheaper check is the test suite, which needs none of that: Django forces
+`DEBUG=False` while tests run, so `self.client.get('/no-such-page/')` renders
+the real template.
+
+```bash
+python manage.py test core.tests.ErrorPageTests
+```
 
 For an actual host to put this on, `DEPLOY.md` walks through PythonAnywhere's
 free tier step by step. It is worth a look even if you deploy elsewhere,

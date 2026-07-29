@@ -1,0 +1,41 @@
+{# Shown when a POST fails the CSRF check — nearly always an expired session or
+   a stale tab, so the page says that rather than repeating Django's default
+   security lecture. #}
+{% extends 'base.html' %}
+
+{% block title %}Your session expired{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Session expired' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="error-page spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="error-page__card">
+                    <p class="error-page__code">403</p>
+                    <h3>Your session expired</h3>
+
+                    <p class="error-page__lead">
+                        The form you submitted was left open too long, so we couldn't
+                        verify it came from you. Nothing was submitted and nothing was
+                        charged. Open the page again and resend it.
+                    </p>
+
+                    <div class="error-page__actions">
+                        <a href="{% url 'cart:detail' %}" class="primary-btn">Back to cart</a>
+                        <a href="{% url 'core:home' %}" class="site-btn">Back to home</a>
+                    </div>
+
+                    <p class="error-page__hint">
+                        If your browser blocks cookies, turn them on for this site —
+                        the shop needs them to keep you signed in.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

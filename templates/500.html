@@ -1,0 +1,75 @@
+{% load static %}<!DOCTYPE html>
+{# Django renders this one with no request and no context processors, so it
+   cannot extend base.html — the header and footer both need `cart` and
+   `nav_categories`, and the database is often the very thing that just broke.
+   Everything here is therefore self-contained: no theme css, no javascript,
+   no queries. It only borrows the theme's colours so it still reads as us. #}
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Something went wrong</title>
+    <link rel="icon" href="{% static 'img/logo.png' %}" type="image/png">
+    <style>
+        body {
+            margin: 0;
+            padding: 60px 20px;
+            font-family: "Nunito Sans", "Helvetica Neue", Arial, sans-serif;
+            color: #111;
+            background: #fff;
+            text-align: center;
+        }
+
+        .wrap { max-width: 560px; margin: 0 auto; }
+
+        img { max-width: 160px; height: auto; margin-bottom: 40px; }
+
+        .code {
+            font-size: 64px;
+            font-weight: 700;
+            letter-spacing: 6px;
+            color: #e53637;
+            margin: 0 0 10px;
+        }
+
+        h1 { font-size: 26px; font-weight: 700; margin: 0 0 18px; }
+
+        p { font-size: 15px; line-height: 26px; color: #6f6f6f; margin: 0 0 14px; }
+
+        a.btn {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 14px 30px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-decoration: none;
+            color: #fff;
+            background: #111;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <a href="{% url 'core:home' %}"><img src="{% static 'img/logo.png' %}" alt="Home"></a>
+
+        <p class="code">500</p>
+        <h1>Something went wrong on our side</h1>
+
+        <p>
+            This one is our fault, not yours. The problem has been logged and we are
+            looking at it.
+        </p>
+        <p>
+            If you were paying for an order, nothing was taken — check
+            <strong>My orders</strong> once the shop is back.
+        </p>
+
+        <a class="btn" href="{% url 'core:home' %}">Back to home</a>
+    </div>
+</body>
+
+</html>

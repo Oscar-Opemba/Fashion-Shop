@@ -72,3 +72,38 @@ class ContactFormTests(TestCase):
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class ErrorPageTests(TestCase):
+    """A wrong url should land on our own page, not the browser's."""
+
+    def test_an_unknown_url_renders_the_branded_404(self):
+        response = self.client.get('/no-such-page/')
+        self.assertEqual(response.status_code, 404)
+        self.assertTemplateUsed(response, '404.html')
+
+    def test_the_404_page_offers_a_way_back_into_the_shop(self):
+        response = self.client.get('/no-such-page/')
+        content = response.content.decode()
+        # The header, the search box and the buttons all have to survive the
+        # 404 — that is the whole point of the page.
+        self.assertIn(reverse('core:home'), content)
+        self.assertIn(reverse('shop:product_list'), content)
+        self.assertIn('name="q"', content)
+
+    def test_a_missing_product_renders_the_branded_404(self):
+        response = self.client.get('/shop/does-not-exist/')
+        self.assertEqual(response.status_code, 404)
+        self.assertTemplateUsed(response, '404.html')
+
+    def test_the_500_page_renders_with_no_context_processors(self):
+        # server_error() renders the template with an empty context, so
+        # anything needing `cart` or `nav_categories` would come out blank
+        # exactly when it is needed most. Rendering it the same way here is
+        # what stops 500.html from quietly growing a dependency on base.html.
+        from django.template.loader import get_template
+
+        html = get_template('500.html').render()
+        self.assertIn('Something went wrong', html)
+        self.assertNotIn('header__nav__option', html)

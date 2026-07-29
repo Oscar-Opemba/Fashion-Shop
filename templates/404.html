@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Page not found{% endblock %}
+
+{% block meta_description %}That page does not exist. Search the catalogue or carry on
+shopping.{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Page not found' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="error-page spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="error-page__card">
+                    <p class="error-page__code">404</p>
+                    <h3>We can't find that page</h3>
+
+                    <p class="error-page__lead">
+                        The link may be out of date, or the product may have been taken
+                        down. Your cart is untouched — nothing has been lost.
+                    </p>
+
+                    <form class="error-page__search" action="{% url 'shop:product_list' %}"
+                          method="get" role="search">
+                        <label for="notfound-search" class="sr-only">Search products</label>
+                        <input type="search" id="notfound-search" name="q"
+                               placeholder="Search for a product...">
+                        <button type="submit" class="site-btn">Search</button>
+                    </form>
+
+                    <div class="error-page__actions">
+                        <a href="{% url 'core:home' %}" class="primary-btn">Back to home</a>
+                        <a href="{% url 'shop:product_list' %}" class="site-btn">Continue shopping</a>
+                    </div>
+
+                    {% if nav_categories %}
+                        <div class="error-page__links">
+                            <span>Popular categories</span>
+                            {% for category in nav_categories|slice:":4" %}
+                                <a href="{{ category.get_absolute_url }}">{{ category.name }}</a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <p class="error-page__hint">
+                        Still stuck?
+                        <a href="{% url 'core:contact' %}">Tell us what you were looking for</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

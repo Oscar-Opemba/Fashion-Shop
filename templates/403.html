@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Not allowed{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Not allowed' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="error-page spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="error-page__card">
+                    <p class="error-page__code">403</p>
+                    <h3>That page isn't yours to open</h3>
+
+                    <p class="error-page__lead">
+                        {% if user.is_authenticated %}
+                            You are signed in as {{ user.email }}, and this page belongs to
+                            someone else — another shopper's order, or a staff-only screen.
+                        {% else %}
+                            You need to be signed in to see this page.
+                        {% endif %}
+                    </p>
+
+                    <div class="error-page__actions">
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'orders:history' %}" class="primary-btn">My orders</a>
+                        {% else %}
+                            <a href="{% url 'account_login' %}" class="primary-btn">Sign in</a>
+                        {% endif %}
+                        <a href="{% url 'shop:product_list' %}" class="site-btn">Continue shopping</a>
+                    </div>
+
+                    <p class="error-page__hint">
+                        Think this is a mistake?
+                        <a href="{% url 'core:contact' %}">Let us know</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

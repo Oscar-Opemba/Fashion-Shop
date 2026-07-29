@@ -5,7 +5,7 @@ session-based cart, guest checkout, and M-Pesa payment through Safaricom's
 Daraja API (STK Push).
 
 - **~3,500 lines** of Python (excluding migrations and the virtualenv)
-- **2,241 lines** across 36 templates
+- **2,602 lines** across 45 templates
 - **7 apps**, 11 models, 111 static files, 28 uploaded media files
 
 ---
@@ -97,8 +97,15 @@ Fashion-Shop/
 │   ├── tests.py                      260
 │   └── migrations/0001_initial.py
 │
-├── templates/                              ── 40 FILES, 2,347 LINES ──
+├── templates/                              ── 45 FILES, 2,602 LINES ──
 │   ├── base.html                      59   the skeleton every page extends
+│   │
+│   │                                       error pages — found by NAME, no url
+│   ├── 404.html                       57   search box + way back into the shop
+│   ├── 500.html                       75   self-contained: no base, no queries
+│   ├── 403.html                       45
+│   ├── 403_csrf.html                  41   expired form, not a security lecture
+│   ├── 400.html                       37
 │   │
 │   ├── includes/                           8 reusable partials
 │   │   ├── header.html                79   nav, cart badge, account menu
@@ -435,9 +442,15 @@ base.html
 ├── includes: offcanvas · header · messages · footer · search_modal
 │
 ├── 15 page templates  {% extends 'base.html' %}
+├── 404 · 403 · 400 · 403_csrf           ← extend base too, so a wrong url
+│                                          still looks like the shop
 └── account/base_entrance.html          ← two-level inheritance
     ├── account/login.html
     └── account/signup.html
+
+500.html deliberately extends nothing: Django renders it with an empty
+context and no request, so base.html's header would have no `cart` and no
+`nav_categories` — and the database is often what just failed.
 ```
 
 ### Context processors — data on every page
@@ -548,7 +561,7 @@ nothing with `migrate` then `seed`; `seed` is idempotent and safe to re-run.
 
 ### Testing
 
-`python manage.py test` runs **123 tests** in about 4.5 seconds:
+`python manage.py test` runs **127 tests** in about 4.5 seconds:
 
 | App | Tests | Covers |
 |---|---|---|
@@ -556,7 +569,7 @@ nothing with `migrate` then `seed`; `seed` is idempotent and safe to re-run.
 | `orders` | 29 | checkout, stock timing, totals, coupons, phone normalisation, order ownership |
 | `payments` | 26 | phone parsing, STK push shortcode types, callback idempotency, coupon redemption, token rejection, guest order access, status polling, retry |
 | `accounts` | 21 | profile signal, one-default-address rule, cross-user access, signup/login/logout, password reset end to end |
-| `core` | 8 | home page, deal of the week, contact form |
+| `core` | 12 | home page, deal of the week, contact form, error pages |
 | `cart` | 4 | session serialisation, stock capping, captured prices |
 
 The security-shaped ones are worth keeping green: a second user must get a 404
