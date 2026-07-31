@@ -1,5 +1,8 @@
 # Django E-commerce Storefront
 
+![Top language](https://img.shields.io/github/languages/top/Oscar-Opemba/Fashion-Shop)
+![Last commit](https://img.shields.io/github/last-commit/Oscar-Opemba/Fashion-Shop)
+
 An online store built on Django 6, using the
 [MaleFashion](https://themewagon.com/themes/free-bootstrap-4-html5-ecommerce-website-template-malefashion/)
 ThemeWagon template as its front end.
