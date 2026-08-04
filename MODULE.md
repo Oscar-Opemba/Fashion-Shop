@@ -2221,19 +2221,35 @@ want them.
 python manage.py test
 ```
 ```
-Ran 123 tests in 4.537s
+Ran 179 tests in 6.3s
 
 OK
 ```
 
 | App | Tests | Covers |
 |---|---|---|
-| `shop` | 35 | listing, search, price bounds, size/colour facets, detail access, seed integrity, staff CRUD |
-| `orders` | 29 | checkout, stock timing, totals, coupons (category scoping + usage cap), phone normalisation, order ownership |
-| `payments` | 26 | phone parsing, STK push shortcode types, callback idempotency, coupon redemption, token rejection, guest order access, status polling, retry |
+| `shop` | 62 | listing, search, price bounds, size/colour facets, detail access, seed integrity, staff CRUD, reviews and cached ratings, saved items, image downscaling |
+| `orders` | 50 | checkout, stock timing, totals, coupons (category scoping + usage cap), phone normalisation, order ownership, status timeline, public tracking, receipt email |
+| `payments` | 30 | phone parsing, STK push shortcode types, callback idempotency, coupon redemption, token rejection, guest order access, status polling, retry, timeline and receipt side effects |
 | `accounts` | 21 | profile signal, one-default-address rule, cross-user access, signup/login/logout, password reset end to end |
-| `core` | 8 | home page, deal of the week, contact form |
+| `core` | 12 | home page, deal of the week, contact form |
 | `cart` | 4 | session serialisation, stock capping, captured prices |
+
+Three of those are worth calling out, because they test the thing that is easy
+to get wrong rather than the thing that is easy to test:
+
+- **`test_a_bulk_delete_still_recalculates`** — `queryset.delete()` never calls
+  a model's `delete()`. Neither does the cascade when an account is removed.
+  Both would have left products advertising ratings nobody gave them, which is
+  why the recalculation hangs off a signal.
+- **`test_a_failed_receipt_does_not_lose_the_payment`** — patches `send_mail`
+  to raise, then asserts the order is still paid and the stock still taken. A
+  shop that dropped a confirmed payment because a mail server timed out would
+  be far worse than one that missed a receipt.
+- **`test_the_api_never_returns_the_address`** — the tracking lookup is an
+  order number and a phone, which is not a password. The test asserts what the
+  endpoint may *not* say, which is the kind of thing that quietly stops being
+  true when someone adds a field to a serializer.
 
 Each test runs against a **fresh throwaway database**, created and destroyed
 per run. Your real data is never touched.
@@ -2468,5 +2484,20 @@ process rather than a deployment step.
     someone's data — and write exactly one implementation of that check.
 11. **Make retries harmless.** Anything a third party can send twice needs an
     idempotency guard.
+12. **Hang derived data off signals, not off `save()`.** `queryset.delete()`
+    and cascades never call a model's own methods, so a cache maintained there
+    goes stale in exactly the cases nobody tests by hand.
+13. **Keep side effects out of the money path.** Sending a receipt is allowed
+    to fail; recording a payment is not. Put the fragile one after the durable
+    one, and let it swallow its own errors.
+14. **Anything decorative that only appears on `:hover` needs a non-hover way
+    in.** A touch screen never fires it. This shop shipped a product grid that
+    could not open a product on a phone.
+15. **Check contrast with a number, not an eye.** Two colours inherited from
+    the theme were below the readable floor and had been carrying real content
+    for months.
+16. **Hash your static filenames before you need to.** Without it a returning
+    visitor runs yesterday's CSS against today's HTML, and the bug only
+    appears for people who have been to the site before — which is never you.
 12. **Test the security-shaped things.** They are the ones a refactor breaks
     silently.
