@@ -97,6 +97,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'cart.context_processors.cart',
                 'shop.context_processors.shop',
+                'shop.context_processors.wishlist',
             ],
         },
     },
@@ -146,6 +147,32 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Cache busting. collectstatic writes style.a3f8b1c9.css alongside style.css
+# and records the mapping in staticfiles.json; {% static %} then emits the
+# hashed name, so a changed stylesheet arrives under a URL no browser has seen
+# before.
+#
+# This is not a nicety. PythonAnywhere serves /static/ with a long cache
+# lifetime, so without it a returning visitor keeps yesterday's CSS against
+# today's HTML for as long as their cache holds. That combination was caught in
+# development: a stale storefront.css against the rebuilt product card put the
+# "Add to cart" button back behind :hover, which is precisely the bug the card
+# was rewritten to fix.
+#
+# Kept off under DEBUG — the hashing pass makes every edit need a collectstatic
+# before it shows up, which is miserable to develop against.
+if not DEBUG:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            # Manifest hashing, but tolerant of the one dead asset reference
+            # inside the vendored carousel CSS — see myproject/storages.py.
+            'BACKEND': 'myproject.storages.ForgivingManifestStaticFilesStorage',
+        },
+    }
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'

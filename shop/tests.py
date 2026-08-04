@@ -1,13 +1,16 @@
+import tempfile
 from decimal import Decimal
 from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from .imaging import MAX_SIDE
 from .management.commands.seed import COLOURS, PRODUCTS, SIZES
-from .models import Category, Colour, Product, Size
+from .models import Category, Colour, Product, Review, Size, WishlistItem
 
 # Imported to prove the PROTECT on OrderItem.product surfaces as a message.
 from orders.models import Order, OrderItem
@@ -395,3 +398,288 @@ class ProductCrudTests(TestCase):
             reverse('shop:category_delete', kwargs={'slug': empty.slug}), follow=True
         )
         self.assertFalse(Category.objects.filter(pk=empty.pk).exists())
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class ReviewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.category = Category.objects.create(name='Bags')
+        cls.product = Product.objects.create(
+            category=cls.category, name='Tote', price=Decimal('6500'), stock=5
+        )
+        cls.amina = User.objects.create_user('amina', password='pw')
+        cls.brian = User.objects.create_user('brian', password='pw')
+
+    def post_review(self, rating=5, body='Great'):
+        return self.client.post(
+            self.product.get_absolute_url(), {'rating': rating, 'body': body}
+        )
+
+    def test_a_new_product_has_no_rating(self):
+        self.assertEqual(self.product.rating_count, 0)
+        self.assertEqual(self.product.rating_average, Decimal('0'))
+        self.assertEqual(self.product.stars, [False] * 5)
+
+    def test_posting_a_review_updates_the_cached_rating(self):
+        self.client.force_login(self.amina)
+        self.post_review(rating=4)
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.rating_count, 1)
+        self.assertEqual(self.product.rating_average, Decimal('4.00'))
+        self.assertEqual(self.product.stars, [True, True, True, True, False])
+
+    def test_the_average_is_the_mean_of_every_review(self):
+        Review.objects.create(product=self.product, user=self.amina, rating=5)
+        Review.objects.create(product=self.product, user=self.brian, rating=2)
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.rating_average, Decimal('3.50'))
+        self.assertEqual(self.product.rating_count, 2)
+
+    def test_deleting_a_review_recalculates_the_rating(self):
+        first = Review.objects.create(product=self.product, user=self.amina, rating=5)
+        Review.objects.create(product=self.product, user=self.brian, rating=1)
+        first.delete()
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.rating_average, Decimal('1.00'))
+        self.assertEqual(self.product.rating_count, 1)
+
+    def test_deleting_the_last_review_returns_the_rating_to_zero(self):
+        review = Review.objects.create(product=self.product, user=self.amina, rating=5)
+        review.delete()
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.rating_count, 0)
+        self.assertEqual(self.product.rating_average, Decimal('0'))
+
+    def test_posting_twice_edits_the_first_review_rather_than_adding_one(self):
+        self.client.force_login(self.amina)
+        self.post_review(rating=5, body='First impression')
+        self.post_review(rating=2, body='Changed my mind')
+
+        self.assertEqual(Review.objects.filter(product=self.product).count(), 1)
+        review = Review.objects.get(product=self.product)
+        self.assertEqual(review.rating, 2)
+        self.assertEqual(review.body, 'Changed my mind')
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.rating_average, Decimal('2.00'))
+
+    def test_anonymous_visitors_are_sent_to_sign_in(self):
+        response = self.post_review()
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/login/', response['Location'])
+        self.assertFalse(Review.objects.exists())
+
+    def test_a_rating_outside_one_to_five_is_rejected(self):
+        self.client.force_login(self.amina)
+        response = self.post_review(rating=9)
+        self.assertEqual(response.status_code, 200)  # re-rendered, not redirected
+        self.assertFalse(Review.objects.exists())
+
+    def test_a_review_without_a_purchase_is_not_marked_verified(self):
+        self.client.force_login(self.amina)
+        self.post_review()
+        self.assertFalse(Review.objects.get().is_verified_purchase)
+
+    def test_a_review_after_a_paid_order_is_marked_verified(self):
+        order = Order.objects.create(
+            user=self.amina, full_name='Amina', phone='0712345678',
+            county='Nairobi', town='Nairobi', street='Moi Ave', paid=True,
+        )
+        OrderItem.objects.create(
+            order=order, product=self.product, price=self.product.price, quantity=1
+        )
+
+        self.client.force_login(self.amina)
+        self.post_review()
+        self.assertTrue(Review.objects.get().is_verified_purchase)
+
+    def test_an_unpaid_order_does_not_earn_the_badge(self):
+        order = Order.objects.create(
+            user=self.amina, full_name='Amina', phone='0712345678',
+            county='Nairobi', town='Nairobi', street='Moi Ave', paid=False,
+        )
+        OrderItem.objects.create(
+            order=order, product=self.product, price=self.product.price, quantity=1
+        )
+
+        self.client.force_login(self.amina)
+        self.post_review()
+        self.assertFalse(Review.objects.get().is_verified_purchase)
+
+    def test_a_bulk_delete_still_recalculates(self):
+        """queryset.delete() never calls Review.delete(), so this proves the
+        post_delete signal is what keeps the cached rating honest."""
+        Review.objects.create(product=self.product, user=self.amina, rating=5)
+        Review.objects.create(product=self.product, user=self.brian, rating=5)
+
+        Review.objects.filter(product=self.product).delete()
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.rating_count, 0)
+        self.assertEqual(self.product.rating_average, Decimal('0'))
+
+    def test_deleting_the_author_recalculates(self):
+        """Same again for the cascade when an account is removed."""
+        Review.objects.create(product=self.product, user=self.amina, rating=5)
+        Review.objects.create(product=self.product, user=self.brian, rating=1)
+
+        self.brian.delete()
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.rating_count, 1)
+        self.assertEqual(self.product.rating_average, Decimal('5.00'))
+
+    def test_the_detail_page_lists_reviews(self):
+        Review.objects.create(
+            product=self.product, user=self.amina, rating=5, body='Roomy and solid'
+        )
+        response = self.client.get(self.product.get_absolute_url())
+        self.assertContains(response, 'Roomy and solid')
+        self.assertContains(response, 'Reviews (1)')
+
+    def test_sorting_by_rating_puts_the_best_first(self):
+        poor = Product.objects.create(
+            category=self.category, name='Poor', price=Decimal('100'), stock=1
+        )
+        Review.objects.create(product=self.product, user=self.amina, rating=5)
+        Review.objects.create(product=poor, user=self.amina, rating=1)
+
+        response = self.client.get(reverse('shop:product_list'), {'sort': 'rating'})
+        names = [p.name for p in response.context['products']]
+        self.assertLess(names.index('Tote'), names.index('Poor'))
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class WishlistTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.category = Category.objects.create(name='Bags')
+        cls.product = Product.objects.create(
+            category=cls.category, name='Tote', price=Decimal('6500'), stock=5
+        )
+        cls.amina = User.objects.create_user('amina', password='pw')
+
+    def toggle(self, **extra):
+        return self.client.post(
+            reverse('shop:wishlist_toggle', args=[self.product.pk]), **extra
+        )
+
+    def test_saving_then_saving_again_removes_it(self):
+        self.client.force_login(self.amina)
+
+        self.toggle()
+        self.assertTrue(
+            WishlistItem.objects.filter(user=self.amina, product=self.product).exists()
+        )
+
+        self.toggle()
+        self.assertFalse(
+            WishlistItem.objects.filter(user=self.amina, product=self.product).exists()
+        )
+
+    def test_the_ajax_toggle_answers_json(self):
+        self.client.force_login(self.amina)
+        response = self.toggle(headers={'x-requested-with': 'XMLHttpRequest'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'saved': True, 'count': 1, 'label': 'Saved'})
+
+    def test_anonymous_visitors_are_sent_to_sign_in(self):
+        response = self.toggle()
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/login/', response['Location'])
+        self.assertFalse(WishlistItem.objects.exists())
+
+    def test_the_toggle_refuses_get(self):
+        self.client.force_login(self.amina)
+        response = self.client.get(
+            reverse('shop:wishlist_toggle', args=[self.product.pk])
+        )
+        self.assertEqual(response.status_code, 405)
+
+    def test_the_saved_page_lists_saved_products(self):
+        WishlistItem.objects.create(user=self.amina, product=self.product)
+        self.client.force_login(self.amina)
+
+        response = self.client.get(reverse('shop:wishlist'))
+        self.assertContains(response, 'Tote')
+
+    def test_the_saved_page_is_private(self):
+        response = self.client.get(reverse('shop:wishlist'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/login/', response['Location'])
+
+    def test_the_empty_saved_page_says_so(self):
+        self.client.force_login(self.amina)
+        response = self.client.get(reverse('shop:wishlist'))
+        self.assertContains(response, 'not saved anything yet')
+
+    def test_one_row_per_user_and_product(self):
+        from django.db import IntegrityError, transaction
+
+        WishlistItem.objects.create(user=self.amina, product=self.product)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            WishlistItem.objects.create(user=self.amina, product=self.product)
+
+
+class ImageOptimisationTests(TestCase):
+    """The upload-time downscaler in shop/imaging.py."""
+
+    def make_png(self, width, height):
+        from io import BytesIO
+        from PIL import Image
+
+        buffer = BytesIO()
+        Image.new('RGB', (width, height), (180, 120, 90)).save(buffer, format='PNG')
+        return SimpleUploadedFile('shot.png', buffer.getvalue(), 'image/png')
+
+    def setUp(self):
+        self.category = Category.objects.create(name='Bags')
+
+    def test_an_upload_is_re_encoded_as_webp(self):
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                product = Product.objects.create(
+                    category=self.category, name='Tote', price=Decimal('1'),
+                    image=self.make_png(2000, 2000),
+                )
+                self.assertTrue(product.image.name.endswith('_opt.webp'))
+
+    def test_an_oversized_upload_is_bounded(self):
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                product = Product.objects.create(
+                    category=self.category, name='Tote', price=Decimal('1'),
+                    image=self.make_png(3000, 2000),
+                )
+                with Image.open(product.image) as img:
+                    self.assertLessEqual(max(img.size), MAX_SIDE)
+
+    def test_a_second_save_does_not_re_encode(self):
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                product = Product.objects.create(
+                    category=self.category, name='Tote', price=Decimal('1'),
+                    image=self.make_png(800, 800),
+                )
+                first = product.image.name
+
+                product.price = Decimal('2')
+                product.save()
+
+                # A re-encode would append a second marker, or storage would
+                # hand back a suffixed duplicate name.
+                self.assertEqual(product.image.name, first)
+
+    def test_a_product_without_an_image_saves_fine(self):
+        product = Product.objects.create(
+            category=self.category, name='Plain', price=Decimal('1')
+        )
+        self.assertFalse(product.image)

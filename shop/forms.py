@@ -2,7 +2,7 @@ from django import forms
 from django.utils.text import slugify
 from django_ckeditor_5.widgets import CKEditor5Widget
 
-from .models import Category, Product
+from .models import Category, Product, Review
 
 
 class SlugFromNameMixin:
@@ -81,3 +81,44 @@ class CategoryForm(SlugFromNameMixin, BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._style_widgets()
+
+
+class ReviewForm(forms.ModelForm):
+    """Post or edit your review of one product.
+
+    Not given BootstrapFormMixin: the review box sits inside the product page's
+    own tab rather than on a form page, and takes the `.review-form` styling
+    storefront.css already carries for it.
+    """
+
+    class Meta:
+        model = Review
+        fields = ['rating', 'body']
+        widgets = {
+            'rating': forms.RadioSelect(choices=[
+                (5, '5 — Love it'),
+                (4, '4 — Good'),
+                (3, '3 — It is fine'),
+                (2, '2 — Disappointing'),
+                (1, '1 — Would not buy again'),
+            ]),
+            'body': forms.Textarea(attrs={
+                'rows': 4,
+                'placeholder': 'What did you think? Fit, quality, delivery…',
+            }),
+        }
+        labels = {
+            'rating': 'Your rating',
+            'body': 'Your review',
+        }
+        help_texts = {
+            'body': 'Optional — a rating on its own still counts.',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # ModelForm renders a required PositiveSmallIntegerField with an empty
+        # choice; on a radio group that is a stray blank button above the
+        # stars.
+        self.fields['rating'].empty_label = None
+        self.fields['rating'].required = True

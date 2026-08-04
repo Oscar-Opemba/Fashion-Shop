@@ -77,6 +77,89 @@
             });
     });
 
+    // Save-for-later without a page reload. Same bargain as add-to-cart: the
+    // form posts normally with JavaScript off, and the view answers a redirect
+    // instead of JSON when the request is not an XHR.
+    document.addEventListener('submit', function (event) {
+        var form = event.target.closest('[data-wishlist-form]');
+        if (!form) return;
+
+        event.preventDefault();
+
+        var button = form.querySelector('button[type=submit]');
+        if (button) button.disabled = true;
+
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken(form)
+            }
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error('save failed');
+                return response.json();
+            })
+            .then(function (data) {
+                if (button) {
+                    button.classList.toggle('is-saved', data.saved);
+                    button.setAttribute('aria-pressed', data.saved ? 'true' : 'false');
+                    button.title = data.label;
+
+                    var icon = button.querySelector('i');
+                    if (icon) {
+                        icon.classList.toggle('fa-heart', data.saved);
+                        icon.classList.toggle('fa-heart-o', !data.saved);
+                    }
+
+                    // The detail page's button carries a word beside the
+                    // heart; the grid's is the heart alone.
+                    var label = button.querySelector('[data-save-label]');
+                    if (label) label.textContent = data.saved ? 'Saved for later' : 'Save for later';
+                }
+
+                document.querySelectorAll('[data-wishlist-count]').forEach(function (el) {
+                    el.textContent = data.count ? ' (' + data.count + ')' : '';
+                });
+
+                flash(data.saved ? 'Saved for later.' : 'Removed from saved items.');
+            })
+            .catch(function () {
+                // Signed out mid-session, or the network dropped. A normal
+                // submit either saves it or lands on the sign-in page, both of
+                // which beat a heart that silently does nothing.
+                form.submit();
+            })
+            .finally(function () {
+                if (button) button.disabled = false;
+            });
+    });
+
+    // A link to #reviews has to open the reviews tab, not just scroll to a
+    // panel Bootstrap is keeping hidden.
+    function openReviewsTab() {
+        if (window.location.hash !== '#reviews') return;
+        var trigger = document.querySelector('[href="#tabs-reviews"]');
+        if (!trigger) return;
+        if (window.jQuery) {
+            window.jQuery(trigger).tab('show');
+        }
+        trigger.scrollIntoView({block: 'center'});
+    }
+
+    window.addEventListener('hashchange', openReviewsTab);
+    document.addEventListener('DOMContentLoaded', openReviewsTab);
+
+    document.addEventListener('click', function (event) {
+        var link = event.target.closest('a[href="#reviews"]');
+        if (!link) return;
+        // Setting the hash fires hashchange, which does the work above.
+        window.location.hash = '#reviews';
+        event.preventDefault();
+        openReviewsTab();
+    });
+
     // The product gallery now uses the theme's Bootstrap tabs, so no custom
     // image-swapping code is needed here.
 })();

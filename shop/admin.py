@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Category, Colour, Product, ProductImage, Size
+from .models import Category, Colour, Product, ProductImage, Review, Size, WishlistItem
 
 
 class ProductImageInline(admin.TabularInline):
@@ -43,7 +43,10 @@ class ColourAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['name', 'category', 'price', 'stock', 'is_active', 'created']
+    list_display = [
+        'name', 'category', 'price', 'stock', 'is_active', 'rating_average',
+        'rating_count', 'created',
+    ]
     list_filter = ['is_active', 'category', 'sizes', 'colours', 'created']
     list_editable = ['price', 'stock', 'is_active']
     search_fields = ['name', 'description']
@@ -51,3 +54,35 @@ class ProductAdmin(admin.ModelAdmin):
     filter_horizontal = ['sizes', 'colours']
     inlines = [ProductImageInline]
     date_hierarchy = 'created'
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = [
+        'product', 'user', 'rating', 'is_verified_purchase', 'created',
+    ]
+    list_filter = ['rating', 'is_verified_purchase', 'created']
+    search_fields = ['product__name', 'user__username', 'body']
+    # Both are derived, never typed: the badge is computed on save, and the
+    # timestamps are auto_now/auto_now_add.
+    readonly_fields = ['is_verified_purchase', 'created', 'updated']
+    date_hierarchy = 'created'
+
+    def delete_queryset(self, request, queryset):
+        """Bulk-delete has to leave the cached ratings correct too.
+
+        The admin's default calls queryset.delete(), which never touches
+        Review.delete() — so without this, deleting reviews in bulk would leave
+        every affected product advertising a rating it no longer has.
+        """
+        products = {review.product for review in queryset.select_related('product')}
+        super().delete_queryset(request, queryset)
+        for product in products:
+            product.recalculate_rating()
+
+
+@admin.register(WishlistItem)
+class WishlistItemAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'added']
+    list_filter = ['added']
+    search_fields = ['user__username', 'product__name']

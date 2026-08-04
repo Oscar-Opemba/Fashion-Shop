@@ -308,6 +308,8 @@ img { max-width: 100%; }
     border-radius: var(--radius-lg);
     overflow: hidden;
     margin-bottom: 30px;
+    /* The save heart is positioned against this. */
+    position: relative;
     display: flex;
     flex-direction: column;
     height: calc(100% - 30px);
@@ -928,3 +930,131 @@ img { max-width: 100%; }
     .product__item__text { padding: 14px; }
     .shop__product__option__right { text-align: left; margin-top: 10px; }
 }
+
+/* ---------- Reviews ---------- */
+/* storefront.css has carried .review-item and .review-form since before there
+   was a Review model — the styling was written for a feature that had not been
+   built. What is here is the parts that came with the model: the star row, the
+   score summary and the verified badge. */
+
+.rating i { color: var(--line-strong); font-size: 12px; margin-right: 1px; }
+.rating i.is-filled { color: var(--star); }
+.rating span { color: var(--muted); font-size: 12px; margin-left: 6px; }
+
+.rating--link,
+.rating--empty {
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.rating--link:hover span,
+.rating--empty:hover { color: var(--accent); }
+.rating--empty { border-bottom: 1px solid var(--line); }
+
+.review-summary {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 24px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+}
+
+.review-summary__score strong { font-size: 42px; color: var(--ink); line-height: 1; }
+.review-summary__score span { color: var(--muted); font-size: 18px; }
+.review-summary p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.review-summary .rating i { font-size: 15px; }
+
+/* Earned by having actually bought the thing, so it is worth looking like a
+   badge rather than another line of grey text. */
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #eaf5ea;
+    color: #1e5e21;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .03em;
+}
+
+/* The rating radios are a list of five, and a stack of five radio buttons is
+   a lot of vertical space for one question. */
+.rating-choice > div { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.rating-choice label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+
+.rating-choice label:hover { border-color: var(--ink); background: var(--bg-soft); }
+.rating-choice input { margin: 0; }
+.rating-choice label:has(input:checked) { border-color: var(--ink); background: var(--bg-soft); font-weight: 700; }
+.rating-choice label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.review-form h5 { margin-bottom: 18px; }
+
+/* ---------- Save for later ---------- */
+
+/* The card's heart floats over the top-right of the picture. The picture is a
+   link, so this has to sit above it to be clickable at all. */
+.product__save {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
+    margin: 0;
+}
+
+.save-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .92);
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0;
+    transition: color .2s var(--ease), border-color .2s var(--ease), transform .15s var(--ease);
+}
+
+.save-btn:hover { color: var(--accent); border-color: var(--accent); transform: scale(1.08); }
+.save-btn.is-saved { color: var(--accent); border-color: var(--accent); }
+.save-btn i { font-size: 14px; }
+.save-btn:disabled { opacity: .6; cursor: wait; }
+
+/* The detail page's is a labelled row under Add to cart, not a floating disc. */
+.detail-save { margin-top: 14px; }
+
+.save-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--body);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.save-toggle:hover { color: var(--accent); }
+.save-toggle.is-saved { color: var(--accent); }
+
+.saved-lead { color: var(--muted); margin-bottom: 26px; }

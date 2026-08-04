@@ -1,13 +1,17 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.views import redirect_to_login
 from django.core.paginator import Paginator
 from django.db.models import Count, ProtectedError, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from .forms import CategoryForm, ProductForm
-from .models import Category, Colour, Product, Size
+from .forms import CategoryForm, ProductForm, ReviewForm
+from .models import Category, Colour, Product, Review, Size, WishlistItem
 
 PAGE_SIZE = 12
 
@@ -208,7 +212,14 @@ def product_list(request):
 
     sort = request.GET.get('sort', '')
     products = products.order_by(
-        {'price': 'price', '-price': '-price', 'name': 'name'}.get(sort, '-created')
+        {
+            'price': 'price',
+            '-price': '-price',
+            'name': 'name',
+            # Cached on the row by Review.save, so this is an index scan
+            # rather than a join and an aggregate over every review.
+            'rating': '-rating_average',
+        }.get(sort, '-created')
     )
 
     page = Paginator(products, PAGE_SIZE).get_page(request.GET.get('page'))
@@ -257,11 +268,104 @@ def product_detail(request, slug):
         slug=slug, is_active=True,
     )
 
+    # The signed-in shopper's own review, if any. Its presence turns the form
+    # from "post a review" into "edit yours", which is what the unique
+    # constraint on (product, user) makes the only possible outcome anyway.
+    my_review = None
+    if request.user.is_authenticated:
+        my_review = Review.objects.filter(product=product, user=request.user).first()
+
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            messages.info(request, 'Please sign in to review this product.')
+            # `next` carries them back to the product they were reviewing.
+            return redirect_to_login(product.get_absolute_url())
+
+        form = ReviewForm(request.POST, instance=my_review)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.product = product
+            review.user = request.user
+            review.save()
+            messages.success(
+                request,
+                'Your review has been updated.' if my_review else 'Thanks for your review.',
+            )
+            # Redirect after POST so a refresh does not repost, and land back
+            # on the reviews tab rather than the top of the page.
+            return redirect(f'{product.get_absolute_url()}#reviews')
+        messages.error(request, 'Please check your review and try again.')
+    else:
+        form = ReviewForm(instance=my_review)
+
     return render(request, 'shop/product_detail.html', {
         'product': product,
+        'review_form': form,
+        'my_review': my_review,
+        # select_related matters here even though every related product is in
+        # the same category we already hold: the card prints the category name,
+        # so without it Django re-fetches that one row once per card.
         'related_products': Product.objects.filter(
             category=product.category, is_active=True
-        ).exclude(pk=product.pk)[:4],
+        ).select_related('category').exclude(pk=product.pk)[:4],
+        # select_related('user') — otherwise the list of reviews is an N+1 on
+        # the author of each one.
+        'reviews': product.reviews.select_related('user'),
+        'wishlisted': is_wishlisted(request, product),
+    })
+
+
+def is_wishlisted(request, product):
+    if not request.user.is_authenticated:
+        return False
+    return WishlistItem.objects.filter(user=request.user, product=product).exists()
+
+
+# ---------------------------------------------------------------------------
+# Wishlist
+#
+# POST-only toggles, because they change state. Each answers JSON to fetch and
+# a redirect to a plain form post, so the heart works with JavaScript off — the
+# same bargain shop.js already strikes for add-to-cart.
+# ---------------------------------------------------------------------------
+
+
+@require_POST
+@login_required
+def wishlist_toggle(request, product_id):
+    product = get_object_or_404(Product, pk=product_id, is_active=True)
+
+    item, created = WishlistItem.objects.get_or_create(
+        user=request.user, product=product
+    )
+    if not created:
+        item.delete()
+
+    count = WishlistItem.objects.filter(user=request.user).count()
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'saved': created,
+            'count': count,
+            'label': 'Saved' if created else 'Save for later',
+        })
+
+    messages.success(
+        request,
+        f'Saved {product.name} for later.' if created
+        else f'Removed {product.name} from your saved items.',
+    )
+    return redirect(request.POST.get('next') or product.get_absolute_url())
+
+
+@login_required
+def wishlist(request):
+    items = WishlistItem.objects.filter(user=request.user).select_related(
+        'product', 'product__category'
+    )
+    return render(request, 'shop/wishlist.html', {
+        'items': items,
+        'products': [item.product for item in items],
     })
 
 

@@ -7,6 +7,15 @@ app_name = 'shop'
 urlpatterns = [
     path('', views.product_list, name='product_list'),
 
+    # Like the staff urls below, these sit above `<slug:slug>/` or that
+    # catch-all would read "saved" as a product slug.
+    path('saved/', views.wishlist, name='wishlist'),
+    path(
+        'saved/toggle/<int:product_id>/',
+        views.wishlist_toggle,
+        name='wishlist_toggle',
+    ),
+
     # Staff CRUD. These MUST stay above `<slug:slug>/` — Django matches
     # top-down and that pattern is a catch-all under /shop/, so 'manage'
     # would otherwise be read as a product slug and 404.
