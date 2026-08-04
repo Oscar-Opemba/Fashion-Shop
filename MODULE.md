@@ -513,9 +513,35 @@ actually live:
 `{% load static %}` goes on the **first line of every template that uses it**.
 Forgetting it gives you `Invalid block tag 'static'`.
 
-The payoff comes at deploy: `collectstatic` can rename `style.css` to
-`style.a3f8b1.css` for cache-busting, and `{% static %}` emits the new name
+The payoff comes at deploy: `collectstatic` renames `style.css` to
+`style.a3f8b1c9.css` for cache-busting, and `{% static %}` emits the new name
 everywhere automatically. Hard-coded paths would all break.
+
+That renaming is not automatic — it is a storage backend, and this project ran
+without one for a long time:
+
+```python
+if not DEBUG:
+    STORAGES = {'staticfiles': {'BACKEND': '...ManifestStaticFilesStorage'}}
+```
+
+Skip it and every visitor who has been to your site before keeps their cached
+copy of yesterday's css against today's html, for as long as their browser
+feels like it. **The bug only appears for returning visitors, which is why it
+is so easy to ship** — you have hard-refreshed a hundred times while building
+and it looks perfect to you. It bit this project during the storefront
+refresh: a stale `storefront.css` put the "Add to cart" button back behind
+`:hover`, which is exactly the bug the card had just been rewritten to fix.
+
+One wrinkle worth knowing, because it will stop your first deploy. Manifest
+hashing rewrites every `url(...)` inside your css and **raises if the target
+does not exist**. The vendored `owl.carousel.min.css` references an
+`owl.video.play.png` the theme never shipped. Editing the theme to fix it
+would break the rule this whole section is about, and inventing a placeholder
+png would be worse — a fake asset committed to look real. So the project
+subclasses the backend to log and carry on
+(`myproject/storages.py`), and the log line matters: it must not become a
+blanket that hides a genuine broken reference in your own css later.
 
 ---
 
@@ -663,7 +689,37 @@ def shop(request):
     return {'nav_categories': Category.objects.all()}
 ```
 
-Register both:
+A third one carries the saved-items list, and it is the clearest example of
+why the pattern is worth knowing:
+
+```python
+# shop/context_processors.py
+def wishlist(request):
+    if not request.user.is_authenticated:
+        return {'wishlist_ids': set(), 'wishlist_count': 0}
+
+    ids = set(
+        WishlistItem.objects.filter(user=request.user)
+                            .values_list('product_id', flat=True)
+    )
+    return {'wishlist_ids': ids, 'wishlist_count': len(ids)}
+```
+
+Every product card draws a filled or empty heart, and cards appear on the
+homepage, the listing, the related strip and the saved page. Without this,
+**four separate views** would each have to remember to pass the same set — and
+the card would need a query per product to ask "is this one saved?". One
+`values_list` per request answers it for all of them, and the template just
+checks membership:
+
+```django
+{% if product.id in wishlist_ids %}
+```
+
+Note the early return. Anonymous visitors are most of the traffic and cannot
+have saved anything, so they cost zero queries.
+
+Register all three:
 
 ```python
 'context_processors': [
@@ -673,6 +729,7 @@ Register both:
     'django.contrib.messages.context_processors.messages',
     'cart.context_processors.cart',
     'shop.context_processors.shop',
+    'shop.context_processors.wishlist',
 ],
 ```
 
@@ -680,8 +737,9 @@ The deeper reason these exist: they let apps share data with templates
 **without importing each other**. That is what keeps the dependency graph
 acyclic.
 
-Cost: they run on every request, so keep them to one cheap query. Never put a
-heavy join in one.
+Cost: they run on every request, so keep them to one cheap query — and note
+that "one cheap query" is the whole design constraint above, not an
+afterthought. Never put a heavy join in one.
 
 ### 4.5 Messages
 
@@ -972,7 +1030,80 @@ A `@property` is computed, never stored. Templates call it without parentheses:
 `{% if product.in_stock %}`. Anything derivable from other fields should be a
 property, not a column — a column can go stale, a property cannot.
 
-### 5.9 Migrations
+**And then, occasionally, you break that rule on purpose.** `Product` carries
+two columns that are pure duplication of the reviews table:
+
+```python
+    rating_average = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    rating_count = models.PositiveIntegerField(default=0)
+```
+
+Storing a derived value is called **denormalisation**, and it is a trade: you
+accept that it can go stale, in exchange for not recomputing it. It is only
+worth it when you can say what you are buying. Here:
+
+1. A product card shows stars, and cards render on the homepage, the listing,
+   the related strip and the saved page. Computing the average per card is a
+   query per card. Annotating each queryset instead means four separate places
+   that must all remember to.
+2. Sorting the listing by rating needs the value **in the database**. A
+   `@property` cannot be put in an `ORDER BY`.
+
+The price is staleness, and the way you pay it down is to allow exactly one
+writer:
+
+```python
+    def recalculate_rating(self):
+        stats = self.reviews.aggregate(avg=Avg('rating'), n=Count('id'))
+        Product.objects.filter(pk=self.pk).update(...)
+```
+
+One method, so there is one place for it to be wrong. **If you denormalise
+without that, you have not made a cache — you have made two sources of truth.**
+
+Which leaves the real question: who calls it? That turns out to be the
+interesting part, and it is 5.9.
+
+### 5.9 Signals — for the deletes you did not write
+
+The obvious home for `recalculate_rating()` is `Review.save()` and
+`Review.delete()`. That is wrong, and wrong in a way that passes every test you
+would think to write by hand.
+
+Neither of these calls `Review.delete()`:
+
+```python
+Review.objects.filter(product=p).delete()   # the admin's bulk action
+user.delete()                               # cascades to that user's reviews
+```
+
+Django deletes those rows straight through the query compiler. Your `delete()`
+override never runs, the cached rating keeps whatever it last held, and the
+product goes on advertising a score nobody gave it. Nothing errors. It is the
+same shape of bug as the orphaned css above: silent, and invisible until
+someone looks closely at real data.
+
+**Signals fire for all of it**, because they are emitted by the deletion
+machinery rather than by the model's own methods:
+
+```python
+@receiver(post_save, sender=Review)
+@receiver(post_delete, sender=Review)
+def _refresh_product_rating(sender, instance, **kwargs):
+    instance.product.recalculate_rating()
+```
+
+The rule to take away: **if a piece of derived state must survive every way a
+row can disappear, hang it off a signal, not off an overridden method.** Both
+cases have a test — `test_a_bulk_delete_still_recalculates` and
+`test_deleting_the_author_recalculates` — and both fail if you move that logic
+back into `delete()`. Try it.
+
+(Signals have a bad reputation, deservedly: action at a distance is hard to
+follow. Use them where the *framework* is the caller — like this — and not as
+a way to avoid calling a function yourself.)
+
+### 5.10 Migrations
 
 A **migration** is a versioned, replayable description of a schema change.
 Editing `models.py` alone changes nothing in the database; the migration is
@@ -1001,12 +1132,27 @@ shop
  [X] 0001_initial
  [X] 0002_remove_review_one_review_per_user_per_product_and_more
  [X] 0003_colour_size_product_colours_product_sizes
+ [X] 0004_review_wishlistitem_product_rating_average_and_more
 ```
 
 `[X]` = applied. Read the names as a history: `shop 0002` removed reviews and
-wishlists, `shop 0003` added sizes and colours. `orders 0002` stripped the
-payment fields when M-Pesa was taken out, and `0003` put them back when it
-returned. That log of what happened when is exactly what migrations are for.
+wishlists, `shop 0003` added sizes and colours, `shop 0004` brought reviews and
+wishlists **back**. `orders 0002` stripped the payment fields when M-Pesa was
+taken out, and `0003` put them back when it returned. That log of what happened
+when is exactly what migrations are for.
+
+> Both of those round trips left something behind, and only one was noticed.
+> When `shop 0002` deleted `Review` and `WishlistItem`, their css stayed in
+> `storefront.css` — `.review-item`, `.review-form`, a `.rating i.is-filled`
+> rule — for months, matching nothing. Nothing errored. It read as maintained
+> code right up until the models came back and the classes happened to still
+> fit.
+>
+> This is the silent failure from 3.3 seen from the other side: there, a
+> renamed class left live markup unstyled; here, a deleted model left dead css
+> looking alive. **A migration that drops a model is also a prompt to grep the
+> templates and the stylesheet.** Django will not do it for you — it has no
+> idea those files exist.
 
 **Drift is the thing to watch.** Ask Django whether the models and the
 migrations still agree:
@@ -1069,7 +1215,7 @@ python manage.py makemigrations --check --dry-run   # No changes detected
 - Never edit an applied migration. Make a new one.
 - `makemigrations` then `migrate`, in that order, every time you touch a model.
 
-### 5.10 The ORM, hands on
+### 5.11 The ORM, hands on
 
 ```bash
 python manage.py shell
@@ -1134,7 +1280,7 @@ for p in Product.objects.select_related('category'):
 Both are used in `shop/views.py`. Twenty products with an unoptimised loop is
 21 queries; with `select_related` it is one.
 
-### 5.11 Sample data — `manage.py seed`
+### 5.12 Sample data — `manage.py seed`
 
 An empty shop is impossible to build against, and typing twenty products into
 the admin by hand is worse. So there is a custom management command at
@@ -1750,6 +1896,89 @@ name, phone number and home address.
 copied. Two implementations of one security check is one too many; they drift,
 and the drift is a hole.
 
+### 9.5 "Where is my order?"
+
+`_owns_order` answers who may see an order's *details*. It does not answer the
+question most shoppers actually have, because most orders here are placed
+**without an account** — an M-Pesa buyer types a phone number and nothing else.
+Telling them to sign in to see their order is telling them nothing.
+
+So there are two doors, and they open onto different rooms.
+
+**The history itself.** `Order.status` is where the parcel is now. It cannot
+tell you when it got there, so a second model records the moves:
+
+```python
+class OrderStatusEvent(models.Model):
+    order = models.ForeignKey(Order, related_name='events')
+    status = models.CharField(max_length=20, choices=Order.Status.choices)
+    note = models.CharField(max_length=255, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+```
+
+Append-only. Nothing updates a row here; the timeline is what happened, and a
+record you can edit is not a record. For that to hold, **every** status change
+has to go through one method:
+
+```python
+    def record_status(self, status, note=''):
+        if self.status == status and self.events.filter(status=status).exists():
+            return None                      # already there — say so
+        self.status = status
+        self.save(update_fields=['status', 'updated'])
+        return self.events.create(status=status, note=note)
+```
+
+Three callers: checkout writes the first entry, the M-Pesa callback writes
+`paid`, and the admin writes the rest. That last one is easy to miss and is the
+one that matters most in daily use — staff change an order by picking from the
+dropdown on the admin page, so `OrderAdmin.save_model` has to route that edit
+through `record_status` too. Without it the column changes and the shopper's
+tracker does not. **A tracker that is confidently out of date is worse than no
+tracker at all.**
+
+Returning `None` when nothing changed is not tidiness either. Safaricom replays
+callbacks, so the payment path uses it as the guard that sends one receipt per
+payment rather than one per delivery attempt:
+
+```python
+if order.record_status(Order.Status.PAID, 'M-Pesa payment confirmed.'):
+    send_receipt(order)
+```
+
+**The public door.** `/orders/track/` takes an order number and the phone the
+order was placed with. Numbers are compared on the last nine digits, because
+`0712345678`, `+254712345678` and `254712345678` are one person and a shopper
+should not have to remember which shape they typed.
+
+Now the part worth thinking hardest about: **that pair is not a password.** An
+order number is a small integer anyone can guess, and a phone number is not a
+secret. So the rule is to make the door open onto a small room:
+
+- The page and its JSON twin return status, timeline and a line count. Never
+  the address, the total, or what was bought — roughly what a courier would
+  tell you over the phone.
+- A wrong phone and a nonexistent order return **the same answer**. Distinguish
+  them and you have built an oracle for which order numbers exist.
+
+```python
+    order = Order.objects.filter(pk=order_number).first()
+    if order is None or not order.matches_phone(phone):
+        return None          # deliberately one answer for two situations
+```
+
+Both of those are asserted in tests — `test_the_api_never_returns_the_address`
+and `test_a_wrong_phone_finds_nothing`. Tests that pin down what a view **must
+not** say are worth writing, because that is the property which quietly stops
+being true when someone adds a field later.
+
+The generalisable idea: when you cannot authenticate someone properly, do not
+pretend a weak check is a strong one. **Reduce what the check unlocks until it
+is worth what the check is actually worth.**
+
+`/orders/track/api/` is the same lookup as JSON, and it is what the Android
+app's tracker screen polls.
+
 ---
 
 ## Part 10 — Paying with M-Pesa
@@ -2221,7 +2450,7 @@ want them.
 python manage.py test
 ```
 ```
-Ran 179 tests in 6.3s
+Ran 183 tests in 6.5s
 
 OK
 ```
@@ -2229,7 +2458,7 @@ OK
 | App | Tests | Covers |
 |---|---|---|
 | `shop` | 62 | listing, search, price bounds, size/colour facets, detail access, seed integrity, staff CRUD, reviews and cached ratings, saved items, image downscaling |
-| `orders` | 50 | checkout, stock timing, totals, coupons (category scoping + usage cap), phone normalisation, order ownership, status timeline, public tracking, receipt email |
+| `orders` | 54 | checkout, stock timing, totals, coupons (category scoping + usage cap), phone normalisation, order ownership, status timeline, public tracking, receipt email, mail configuration |
 | `payments` | 30 | phone parsing, STK push shortcode types, callback idempotency, coupon redemption, token rejection, guest order access, status polling, retry, timeline and receipt side effects |
 | `accounts` | 21 | profile signal, one-default-address rule, cross-user access, signup/login/logout, password reset end to end |
 | `core` | 12 | home page, deal of the week, contact form |

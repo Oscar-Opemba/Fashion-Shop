@@ -946,9 +946,14 @@ img { max-width: 100%; }
 }
 
 /* ---------- Reviews ---------- */
-/* storefront.css has carried .review-item and .review-form since before there
-   was a Review model — the styling was written for a feature that had not been
-   built. What is here is the parts that came with the model: the star row, the
+/* storefront.css has carried .review-item and .review-form for months with no
+   Review model behind them. Not styling written ahead of a feature — styling
+   left behind by one: `shop 0002` deleted Review and WishlistItem on
+   2026-07-22 and nobody removed their css. It sat there looking maintained,
+   which is the exact failure mode MODULE.md 3.3 warns about, and it is only
+   luck that the classes still fitted when the models came back in `shop 0004`.
+
+   What is here is the parts that had no css to inherit: the star row, the
    score summary and the verified badge. */
 
 .rating i { color: var(--line-strong); font-size: 12px; margin-right: 1px; }
