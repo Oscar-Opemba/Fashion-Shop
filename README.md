@@ -156,6 +156,31 @@ and are never edited. Two sheets of ours load after it and win:
 `static/js/shop.js` layers add-to-cart-without-a-reload on top of the theme's
 `main.js`. Every form still works with JavaScript off.
 
+## Email
+
+Order receipts and password-reset links print to the console until `.env`
+carries mail credentials:
+
+```
+EMAIL_HOST_USER=shop@gmail.com
+EMAIL_HOST_PASSWORD=<16-character Google App Password>
+```
+
+Setting both switches `EMAIL_BACKEND` to SMTP; leaving them blank keeps the
+console backend, so a fresh clone runs with no mail server.
+
+Gmail rather than a transactional provider, deliberately: PythonAnywhere's
+free tier refuses connections to `smtp.sendgrid.net` and `smtp-relay.brevo.com`
+and allows `smtp.gmail.com`. The password must be an **App Password**
+(<https://myaccount.google.com/apppasswords>, 2-Step Verification required) —
+an ordinary Google password is rejected.
+
+```bash
+python manage.py mailcheck                    # config, socket, TLS, login
+python manage.py mailcheck --to you@here.com  # ...and send a test message
+python manage.py mailcheck --receipt 15       # ...re-send a real order's receipt
+```
+
 ## Social login (optional)
 
 Google and Facebook sign-in are wired through django-allauth and read their

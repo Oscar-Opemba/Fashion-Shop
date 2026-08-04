@@ -198,8 +198,64 @@ LOGIN_URL = 'account_login'
 LOGIN_REDIRECT_URL = 'core:home'
 ACCOUNT_LOGOUT_REDIRECT_URL = 'core:home'
 
-# Console backend keeps password-reset mails visible during development.
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email
+#
+# Same bargain as the social providers below: credentials present means the
+# feature is on, absent means it is off and the site still runs. Set
+# EMAIL_HOST_USER and EMAIL_HOST_PASSWORD and mail is really sent; leave them
+# blank and it prints to the console, which is what keeps password-reset links
+# and order receipts readable in development without a mail server.
+#
+# ---- Why Gmail rather than SendGrid or Brevo ----
+#
+# PythonAnywhere's free tier does not give a process a normal route to the
+# internet. Tested from the live host on 2026-08-04:
+#
+#     smtp.gmail.com:587        OPEN     (STARTTLS + AUTH advertised)
+#     smtp.gmail.com:465        OPEN
+#     smtp.sendgrid.net:587     ConnectionRefusedError
+#     smtp-relay.brevo.com:587  ConnectionRefusedError
+#
+# So the usual advice — "don't use Gmail for transactional mail, use a proper
+# provider" — is not available here without paying for the account. Gmail is
+# what the host will actually talk to. Its limits (about 500 messages a day,
+# and the From address is rewritten to the authenticated mailbox) are fine at
+# this shop's volume; revisit if either stops being true.
+#
+# The password must be a Google **App Password**, not the account password.
+# Those require 2-Step Verification on the account and are created at
+# https://myaccount.google.com/apppasswords — a normal password is rejected.
+
+EMAIL_HOST = env('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(env('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
+EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL', False)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', '')
+
+# Bounded, and deliberately short. `send_receipt` runs on the M-Pesa callback
+# path; Django's default is no timeout at all, so an unresponsive mail server
+# would hold that request open until something upstream gave up. The receipt is
+# already allowed to fail (orders/notifications.py swallows and logs) — this is
+# what stops it failing *slowly*.
+EMAIL_TIMEOUT = int(env('EMAIL_TIMEOUT', '10'))
+
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Gmail rewrites From to the authenticated mailbox regardless of what is set
+# here, so defaulting to EMAIL_HOST_USER keeps the header honest rather than
+# advertising an address the message did not come from.
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER or 'shop@example.com'
+SERVER_EMAIL = env('SERVER_EMAIL') or DEFAULT_FROM_EMAIL
+
+# Where the contact form is delivered. Falls back to the sending mailbox, which
+# is nearly always the right destination for a small shop.
+CONTACT_EMAIL = env('CONTACT_EMAIL') or EMAIL_HOST_USER or 'hello@example.com'
+
+SITE_NAME = env('SITE_NAME', 'Fashion Shop')
 
 
 # Social login (Google, Facebook)

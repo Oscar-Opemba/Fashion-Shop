@@ -2361,8 +2361,9 @@ is nearly always where the mistake is.
 - [ ] `python manage.py collectstatic`, and let the web server serve `staticfiles/`
 - [ ] `python manage.py optimize_images` once, to bring photos uploaded before
       the on-upload downscaler in line (it is idempotent — safe to re-run)
-- [ ] Real SMTP if you want the order receipt to actually reach anyone; on the
-      console backend it prints to the server log and nothing is sent
+- [ ] `EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD` in `.env`, then
+      `python manage.py mailcheck --to you@example.com`. Without them the
+      console backend prints receipts to the server log and sends nothing
 - [ ] `templates/404.html` and friends — with `DEBUG=False` a wrong url gets
       Django's bare grey page unless you supply your own (below)
 - [ ] `MPESA_ENV=production` with production Daraja credentials
@@ -2372,6 +2373,62 @@ is nearly always where the mistake is.
 - [ ] `python manage.py check --deploy` — Django audits its own settings
 - [ ] Back up the database and `media/`
 - [ ] Keep the Colorlib attribution in the footer (CC BY 3.0)
+
+### Sending real email
+
+Receipts and password-reset links go nowhere until `.env` has mail credentials.
+The rule is the same one the social providers use — **credentials present means
+the feature is on**:
+
+```python
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+```
+
+So a fresh clone runs with no mail server, and nothing has to be commented out
+to develop against.
+
+**Use Gmail here, and know why.** The standard advice is to avoid Gmail for
+transactional mail and use SendGrid, Mailgun or Brevo. That advice assumes the
+host will let you talk to them. PythonAnywhere's free tier does not — tested
+from the live host:
+
+```
+smtp.gmail.com:587        open      (STARTTLS + AUTH advertised)
+smtp.sendgrid.net:587     connection refused
+smtp-relay.brevo.com:587  connection refused
+```
+
+Gmail is the one that answers. Its ceiling is roughly 500 messages a day, and
+it rewrites the `From` header to whichever mailbox authenticated, no matter
+what `DEFAULT_FROM_EMAIL` says. At this shop's volume neither matters; on a
+paid account, switch to a real provider and the two settings change.
+
+The password must be a Google **App Password**, created at
+<https://myaccount.google.com/apppasswords> with 2-Step Verification switched
+on. Your ordinary Google password is rejected. Treat the App Password exactly
+like a password on that mailbox — `.env` only, never committed — and use a
+dedicated shop mailbox so revoking it later costs you nothing.
+
+`manage.py mailcheck` tests the chain one link at a time — settings, socket,
+TLS, login, send — so the first thing that is wrong names itself:
+
+```bash
+python manage.py mailcheck                    # config + connect + log in
+python manage.py mailcheck --to you@here.com  # ...and send a test
+python manage.py mailcheck --receipt 15       # ...re-send a real order's receipt
+```
+
+A blocked port and a missing App Password are the only two failures this setup
+actually hits, and both otherwise arrive as a wall of SMTP jargon.
+
+> One thing worth copying: `EMAIL_TIMEOUT` is set, and Django's default is no
+> timeout at all. `send_receipt` runs on the M-Pesa callback path. The receipt
+> was already allowed to *fail* — `orders/notifications.py` swallows and logs,
+> so a dead mail server cannot unwind a confirmed payment. The timeout is what
+> stops it failing *slowly* and holding the callback open.
 
 The hardening itself is already automatic:
 

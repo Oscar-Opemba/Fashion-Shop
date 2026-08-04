@@ -464,3 +464,68 @@ class ReceiptEmailTests(TestCase):
 
         with patch('orders.notifications.send_mail', side_effect=OSError('no relay')):
             self.assertFalse(send_receipt(self.order))
+
+
+class EmailConfigurationTests(TestCase):
+    """The contract between .env and how mail actually goes out.
+
+    Settings are read once at import, so these assert the resolved values and
+    the behaviour that hangs off them rather than re-importing the module.
+    """
+
+    def test_the_send_is_bounded_by_a_timeout(self):
+        """Django defaults to no timeout at all. `send_receipt` runs on the
+        M-Pesa callback path, so an unresponsive mail server must not be able
+        to hold that request open indefinitely."""
+        from django.conf import settings
+
+        self.assertIsNotNone(settings.EMAIL_TIMEOUT)
+        self.assertLessEqual(settings.EMAIL_TIMEOUT, 30)
+
+    def test_credentials_decide_the_backend(self):
+        """Absent credentials mean console, present ones mean SMTP. This is the
+        rule that lets a fresh clone run with no mail server."""
+        from django.core.mail import get_connection
+
+        with self.settings(
+            EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
+        ):
+            self.assertIn('console', get_connection().__class__.__module__)
+
+        with self.settings(
+            EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+        ):
+            self.assertIn('smtp', get_connection().__class__.__module__)
+
+    def test_the_receipt_uses_the_configured_sender(self):
+        from django.core import mail
+
+        from .notifications import send_receipt
+
+        category = Category.objects.create(name='Bags')
+        product = Product.objects.create(
+            category=category, name='Tote', price=Decimal('6500'), stock=5
+        )
+        order = Order.objects.create(**DETAILS)
+        OrderItem.objects.create(
+            order=order, product=product, price=Decimal('6500'), quantity=1
+        )
+
+        with self.settings(DEFAULT_FROM_EMAIL='Shop <shop@example.com>'):
+            send_receipt(order)
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].from_email, 'Shop <shop@example.com>')
+
+    def test_mailcheck_reports_the_console_backend_without_sending(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        with self.settings(
+            EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
+        ):
+            call_command('mailcheck', stdout=out)
+
+        self.assertIn('nothing will be sent', out.getvalue())
