@@ -88,3 +88,36 @@ class CouponApplyForm(forms.Form):
 
         self.coupon = coupon
         return code
+
+
+class OrderTrackForm(forms.Form):
+    """Look up an order without an account.
+
+    Most M-Pesa shoppers here check out as guests, so "sign in to see your
+    order" is not an answer. The pair of order number plus the phone the order
+    was placed with is what protects it: the number alone is a small integer
+    anyone could walk, and the phone is the thing only the buyer and the shop
+    know.
+
+    It is not a password, and it is not treated as one — a tracking page shows
+    a status and a timeline, never the delivery address, the total, or what was
+    bought. The mobile app reads the same endpoint.
+    """
+
+    order_number = forms.IntegerField(
+        min_value=1,
+        label='Order number',
+        widget=forms.NumberInput(attrs={'placeholder': 'e.g. 42', 'inputmode': 'numeric'}),
+    )
+    phone = forms.CharField(
+        max_length=20,
+        label='Phone number',
+        widget=forms.TextInput(attrs={'placeholder': '07XX XXX XXX', 'inputmode': 'tel'}),
+        help_text='The number you placed the order with.',
+    )
+
+    def clean_phone(self):
+        phone = self.cleaned_data['phone'].strip()
+        if not PHONE_RE.match(phone.replace(' ', '')):
+            raise forms.ValidationError('Enter the phone number you ordered with.')
+        return phone

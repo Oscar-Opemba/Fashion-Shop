@@ -146,6 +146,100 @@ class Order(models.Model):
         total = self.get_total()
         return max(1, int(total.to_integral_value(rounding='ROUND_CEILING')))
 
+    # ---- Tracking -------------------------------------------------------
+    #
+    # The stages a parcel actually moves through, in order. CANCELLED is not
+    # among them: it is an exit from the sequence, not a step along it, and the
+    # timeline renders it as one.
+    TIMELINE = [
+        (Status.PENDING, 'Order placed', 'We have your order and are waiting for payment.'),
+        (Status.PAID, 'Payment received', 'M-Pesa confirmed your payment.'),
+        (Status.PROCESSING, 'Packing', 'We are picking and packing your items.'),
+        (Status.SHIPPED, 'On the way', 'Your parcel is with the courier.'),
+        (Status.DELIVERED, 'Delivered', 'Signed for. Enjoy it.'),
+    ]
+
+    def record_status(self, status, note=''):
+        """Move the order to `status` and log it, unless it is already there.
+
+        Every status change in the codebase goes through here so the timeline
+        is a record rather than a guess. Returns the event, or None when
+        nothing changed — callers use that to avoid sending a duplicate
+        notification.
+        """
+        if self.status == status and self.events.filter(status=status).exists():
+            return None
+
+        self.status = status
+        self.save(update_fields=['status', 'updated'])
+        return self.events.create(status=status, note=note)
+
+    def timeline(self):
+        """The five stages, each marked done / current / upcoming.
+
+        Read off the recorded events rather than off `status` alone, so an
+        order that jumped straight from pending to shipped does not show
+        "Payment received" as though it never happened.
+        """
+        reached = {event.status: event for event in self.events.all()}
+        order_of = [status for status, _, _ in self.TIMELINE]
+
+        try:
+            current_index = order_of.index(self.status)
+        except ValueError:
+            # CANCELLED, or a status not in the sequence.
+            current_index = -1
+
+        steps = []
+        for index, (status, label, blurb) in enumerate(self.TIMELINE):
+            event = reached.get(status)
+            steps.append({
+                'status': status,
+                'label': label,
+                'blurb': blurb,
+                'done': event is not None or (0 <= current_index and index < current_index),
+                'current': index == current_index,
+                'at': event.created if event else None,
+            })
+        return steps
+
+    @property
+    def is_cancelled(self):
+        return self.status == self.Status.CANCELLED
+
+    def matches_phone(self, phone):
+        """Is `phone` the number this order was placed with?
+
+        Compared on the last nine digits, which is the part that identifies a
+        Kenyan subscriber: 0712345678, +254712345678 and 254712345678 are the
+        same person, and a shopper tracking a parcel should not have to
+        remember which form they typed at checkout.
+        """
+        mine = ''.join(c for c in self.phone if c.isdigit())[-9:]
+        theirs = ''.join(c for c in str(phone) if c.isdigit())[-9:]
+        return bool(mine) and mine == theirs
+
+
+class OrderStatusEvent(models.Model):
+    """One entry in an order's history.
+
+    Append-only. The order's own `status` column is the current state; this is
+    how it got there, which is what the tracking page and the mobile app show
+    and what makes "shipped on Tuesday" answerable at all.
+    """
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='events')
+    status = models.CharField(max_length=20, choices=Order.Status.choices)
+    note = models.CharField(max_length=255, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created']
+        indexes = [models.Index(fields=['order', 'created'])]
+
+    def __str__(self):
+        return f'{self.order} -> {self.status}'
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

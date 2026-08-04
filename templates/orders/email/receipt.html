@@ -1,0 +1,96 @@
+{% comment %}
+Email HTML, not web HTML. Tables and inline styles throughout, because a
+stylesheet is the first thing a mail client throws away and half of them still
+do not lay out with flexbox. Colours are the shop's tokens written out as
+literals for the same reason — a custom property resolves to nothing in Gmail.
+{% endcomment %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+       style="background:#faf7f3;padding:24px 0;font-family:'Nunito Sans',Helvetica,Arial,sans-serif;">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="max-width:560px;background:#ffffff;border:1px solid #e8e2db;border-radius:8px;">
+                <tr>
+                    <td style="padding:28px 30px 8px;">
+                        <p style="margin:0 0 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#a8412a;font-weight:700;">
+                            Payment received
+                        </p>
+                        <h1 style="margin:0 0 6px;font-size:22px;color:#171310;">
+                            Order #{{ order.pk }} is confirmed
+                        </h1>
+                        <p style="margin:0;font-size:15px;color:#554c44;">
+                            Hi {{ order.full_name }}, your M-Pesa payment came through.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:20px 30px 0;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="font-size:14px;color:#554c44;">
+                            {% for item in items %}
+                                <tr>
+                                    <td style="padding:9px 0;border-bottom:1px solid #e8e2db;">
+                                        {{ item.product.name }}
+                                        <span style="color:#7a6f65;">&times; {{ item.quantity }}</span>
+                                    </td>
+                                    <td align="right" style="padding:9px 0;border-bottom:1px solid #e8e2db;white-space:nowrap;">
+                                        KES {{ item.get_cost|floatformat:2 }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            <tr>
+                                <td style="padding:10px 0 2px;">Subtotal</td>
+                                <td align="right" style="padding:10px 0 2px;">KES {{ order.get_subtotal|floatformat:2 }}</td>
+                            </tr>
+                            {% if order.get_discount %}
+                                <tr>
+                                    <td style="padding:2px 0;color:#2e7d32;">
+                                        Discount{% if order.discount_percent %} ({{ order.discount_percent }}%){% endif %}
+                                    </td>
+                                    <td align="right" style="padding:2px 0;color:#2e7d32;">
+                                        &minus;KES {{ order.get_discount|floatformat:2 }}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            <tr>
+                                <td style="padding:10px 0 0;font-weight:700;color:#171310;font-size:16px;border-top:1px solid #e8e2db;">
+                                    Total
+                                </td>
+                                <td align="right" style="padding:10px 0 0;font-weight:700;color:#171310;font-size:16px;border-top:1px solid #e8e2db;">
+                                    KES {{ order.get_total|floatformat:2 }}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:24px 30px 0;">
+                        <p style="margin:0 0 6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#7a6f65;font-weight:700;">
+                            Delivering to
+                        </p>
+                        <p style="margin:0;font-size:14px;color:#554c44;line-height:1.7;">
+                            {{ order.full_name }}<br>
+                            {{ order.street }}, {{ order.town }}, {{ order.county }}<br>
+                            {{ order.phone }}
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:22px 30px 30px;">
+                        <p style="margin:0;font-size:13px;color:#7a6f65;line-height:1.7;">
+                            Nairobi orders arrive within 24 hours; everywhere else takes 2&ndash;4
+                            working days by courier, and we will call before the parcel goes out.
+                            Track it any time with order number <strong style="color:#171310;">{{ order.pk }}</strong>
+                            and the phone number above.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+
+            <p style="margin:16px 0 0;font-size:12px;color:#7a6f65;">{{ site_name }}</p>
+        </td>
+    </tr>
+</table>

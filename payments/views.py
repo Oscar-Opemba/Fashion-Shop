@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from cart.cart import Cart
 from shop.models import Product
 from orders.models import Coupon, Order
+from orders.notifications import send_receipt
 from orders.views import _owns_order
 
 from .daraja import DarajaError, query_stk_status, stk_push
@@ -167,7 +168,6 @@ def _mark_paid(payment, receipt, result_desc=''):
     payment.save()
 
     order.paid = True
-    order.status = Order.Status.PAID
 
     # stock_applied is the guard that makes a replayed callback harmless.
     if not order.stock_applied:
@@ -186,6 +186,16 @@ def _mark_paid(payment, receipt, result_desc=''):
             )
 
     order.save()
+
+    # Log the move and send the receipt — but only the first time. Safaricom
+    # replays callbacks, and `record_status` returning None is what stops a
+    # shopper getting three copies of the same receipt for one payment.
+    #
+    # Both are after the order is saved and outside anything that could undo
+    # it: the payment is banked and recorded by this point, and neither a
+    # missing event row nor an unreachable mail server may change that.
+    if order.record_status(Order.Status.PAID, 'M-Pesa payment confirmed.'):
+        send_receipt(order)
 
 
 def _mark_failed(payment, code, desc):

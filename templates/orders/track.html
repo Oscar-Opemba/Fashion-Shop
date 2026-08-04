@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Track my order{% endblock %}
+{% block meta_description %}Follow your Fashion Shop order with your order number and phone.{% endblock %}
+
+{% block breadcrumb %}
+    {% with crumb_title='Track my order' %}{% include 'includes/breadcrumb.html' %}{% endwith %}
+{% endblock %}
+
+{% block content %}
+<section class="spad">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7">
+                {% if not order %}
+                    <p class="track-lead">
+                        Most orders here are placed without an account, so you do not need one
+                        to follow yours. Enter the order number from your receipt and the phone
+                        number you paid with.
+                    </p>
+                {% endif %}
+
+                <form method="get" action="{% url 'orders:track' %}" class="track-form">
+                    <div class="checkout__input">
+                        <label for="{{ form.order_number.id_for_label }}">{{ form.order_number.label }}</label>
+                        {{ form.order_number }}
+                        {% for error in form.order_number.errors %}
+                            <small class="form-error">{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                    <div class="checkout__input">
+                        <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                        {{ form.phone }}
+                        <small class="form-hint">{{ form.phone.help_text }}</small>
+                        {% for error in form.phone.errors %}
+                            <small class="form-error">{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="site-btn">Track order</button>
+                </form>
+
+                {% if order %}
+                    <div class="track-result">
+                        <div class="track-result__head">
+                            <div>
+                                <h4>Order #{{ order.order_number|default:order.pk }}</h4>
+                                <p>Placed {{ order.created|date:'j M Y' }} &middot;
+                                    {{ order.items.count }} line{{ order.items.count|pluralize }}</p>
+                            </div>
+                            <span class="status-pill status-pill--{{ order.status }}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+
+                        {% include 'orders/_timeline.html' %}
+
+                        <p class="track-result__note">
+                            {# The lookup is a phone number, not a password, so this page   #}
+                            {# shows progress and nothing else — no address, no total.      #}
+                            Need the full details? <a href="{% url 'orders:history' %}">Sign in</a>
+                            with the account that placed it, or
+                            <a href="{% url 'core:contact' %}">get in touch</a>.
+                        </p>
+                    </div>
+                {% elif searched %}
+                    <p class="empty-state">
+                        No order matches that combination. Double-check the number on your
+                        receipt, and make sure the phone is the one you paid from.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

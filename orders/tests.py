@@ -271,3 +271,196 @@ class OrderAccessTests(TestCase):
         self.client.force_login(self.owner)
         response = self.client.get(reverse('orders:history'))
         self.assertEqual(list(response.context['orders']), [self.order])
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class OrderTimelineTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Bags')
+        self.product = Product.objects.create(
+            category=self.category, name='Tote', price=Decimal('6500'), stock=5
+        )
+        self.order = Order.objects.create(**DETAILS)
+        OrderItem.objects.create(
+            order=self.order, product=self.product, price=Decimal('6500'), quantity=2
+        )
+
+    def test_record_status_writes_an_event(self):
+        event = self.order.record_status(Order.Status.PAID, 'Paid up')
+
+        self.assertIsNotNone(event)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.PAID)
+        self.assertEqual(self.order.events.count(), 1)
+        self.assertEqual(event.note, 'Paid up')
+
+    def test_recording_the_same_status_twice_is_a_no_op(self):
+        self.order.record_status(Order.Status.PAID)
+        second = self.order.record_status(Order.Status.PAID)
+
+        self.assertIsNone(second)
+        self.assertEqual(self.order.events.count(), 1)
+
+    def test_the_timeline_has_a_step_for_every_stage(self):
+        steps = self.order.timeline()
+        self.assertEqual(len(steps), len(Order.TIMELINE))
+        self.assertEqual(steps[0]['label'], 'Order placed')
+        self.assertEqual(steps[-1]['label'], 'Delivered')
+
+    def test_earlier_stages_are_marked_done(self):
+        self.order.record_status(Order.Status.SHIPPED)
+
+        steps = {step['status']: step for step in self.order.timeline()}
+        self.assertTrue(steps[Order.Status.PENDING]['done'])
+        self.assertTrue(steps[Order.Status.PAID]['done'])
+        self.assertTrue(steps[Order.Status.SHIPPED]['current'])
+        self.assertFalse(steps[Order.Status.DELIVERED]['done'])
+
+    def test_a_recorded_stage_carries_its_timestamp(self):
+        self.order.record_status(Order.Status.PAID)
+
+        paid = next(s for s in self.order.timeline() if s['status'] == Order.Status.PAID)
+        self.assertIsNotNone(paid['at'])
+
+    def test_a_cancelled_order_reports_itself(self):
+        self.order.record_status(Order.Status.CANCELLED)
+        self.assertTrue(self.order.is_cancelled)
+        # Nothing is "current" once the order has left the sequence.
+        self.assertFalse(any(step['current'] for step in self.order.timeline()))
+
+
+class PhoneMatchingTests(TestCase):
+    def setUp(self):
+        self.order = Order.objects.create(**{**DETAILS, 'phone': '0712345678'})
+
+    def test_the_same_number_in_any_common_shape_matches(self):
+        for shape in ['0712345678', '+254712345678', '254712345678', '712345678']:
+            with self.subTest(shape=shape):
+                self.assertTrue(self.order.matches_phone(shape))
+
+    def test_a_different_number_does_not_match(self):
+        self.assertFalse(self.order.matches_phone('0787654321'))
+
+    def test_an_empty_phone_does_not_match(self):
+        self.assertFalse(self.order.matches_phone(''))
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class OrderTrackingTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Bags')
+        self.product = Product.objects.create(
+            category=self.category, name='Tote', price=Decimal('6500'), stock=5
+        )
+        self.order = Order.objects.create(**DETAILS)
+        OrderItem.objects.create(
+            order=self.order, product=self.product, price=Decimal('6500'), quantity=2
+        )
+        self.order.record_status(Order.Status.PENDING, 'Order placed.')
+
+    def track(self, **params):
+        return self.client.get(reverse('orders:track'), params)
+
+    def api(self, **params):
+        return self.client.get(reverse('orders:track_api'), params)
+
+    def test_the_bare_page_just_shows_the_form(self):
+        response = self.client.get(reverse('orders:track'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context['order'])
+        self.assertFalse(response.context['searched'])
+
+    def test_the_right_pair_finds_the_order(self):
+        response = self.track(order_number=self.order.pk, phone=DETAILS['phone'])
+        self.assertEqual(response.context['order'], self.order)
+        self.assertContains(response, 'Order placed')
+
+    def test_a_wrong_phone_finds_nothing(self):
+        response = self.track(order_number=self.order.pk, phone='0787654321')
+        self.assertIsNone(response.context['order'])
+
+    def test_an_unknown_order_number_finds_nothing(self):
+        response = self.track(order_number=999999, phone=DETAILS['phone'])
+        self.assertIsNone(response.context['order'])
+
+    def test_the_page_never_leaks_the_delivery_address(self):
+        """The lookup pair is a phone number, not a password, so what it opens
+        is limited to progress."""
+        response = self.track(order_number=self.order.pk, phone=DETAILS['phone'])
+        self.assertNotContains(response, DETAILS['street'])
+        self.assertNotContains(response, DETAILS['email'])
+
+    def test_the_api_returns_the_timeline(self):
+        response = self.api(order_number=self.order.pk, phone=DETAILS['phone'])
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertTrue(data['found'])
+        self.assertEqual(data['order_number'], self.order.pk)
+        self.assertEqual(data['status'], Order.Status.PENDING)
+        self.assertEqual(data['item_count'], 2)
+        self.assertEqual(len(data['timeline']), len(Order.TIMELINE))
+
+    def test_the_api_404s_on_a_wrong_phone(self):
+        response = self.api(order_number=self.order.pk, phone='0787654321')
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(response.json()['found'])
+
+    def test_the_api_400s_on_a_malformed_request(self):
+        response = self.api(order_number='abc', phone='nope')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('errors', response.json())
+
+    def test_the_api_never_returns_the_address(self):
+        response = self.api(order_number=self.order.pk, phone=DETAILS['phone'])
+        body = response.content.decode()
+        self.assertNotIn(DETAILS['street'], body)
+        self.assertNotIn(DETAILS['email'], body)
+        self.assertNotIn(DETAILS['full_name'], body)
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'])
+class ReceiptEmailTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Bags')
+        self.product = Product.objects.create(
+            category=self.category, name='Tote', price=Decimal('6500'), stock=5
+        )
+        self.order = Order.objects.create(**DETAILS)
+        OrderItem.objects.create(
+            order=self.order, product=self.product, price=Decimal('6500'), quantity=2
+        )
+
+    def test_the_receipt_is_sent_and_names_the_order(self):
+        from django.core import mail
+
+        from .notifications import send_receipt
+
+        self.assertTrue(send_receipt(self.order))
+        self.assertEqual(len(mail.outbox), 1)
+
+        message = mail.outbox[0]
+        self.assertEqual(message.to, [DETAILS['email']])
+        self.assertIn(str(self.order.pk), message.subject)
+        self.assertIn('Tote', message.body)
+        self.assertIn('13000.00', message.body)  # 2 x 6500
+
+    def test_an_order_without_an_email_sends_nothing(self):
+        from django.core import mail
+
+        from .notifications import send_receipt
+
+        self.order.email = ''
+        self.order.save()
+
+        self.assertFalse(send_receipt(self.order))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_a_broken_mail_server_does_not_raise(self):
+        """The receipt must never be able to unwind a confirmed payment."""
+        from unittest.mock import patch
+
+        from .notifications import send_receipt
+
+        with patch('orders.notifications.send_mail', side_effect=OSError('no relay')):
+            self.assertFalse(send_receipt(self.order))

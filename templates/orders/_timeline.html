@@ -1,0 +1,35 @@
+{% comment %}
+An order's progress. Included by both orders/detail.html (the signed-in view,
+which also shows what was bought and what it cost) and orders/track.html (the
+public one, which shows only this).
+
+Expects `order` in the context.
+{% endcomment %}
+{% if order.is_cancelled %}
+    <div class="timeline timeline--cancelled">
+        <p class="timeline__cancelled">
+            <i class="fa fa-times-circle" aria-hidden="true"></i>
+            This order was cancelled. Nothing was charged, and nothing is on its way.
+        </p>
+    </div>
+{% else %}
+    <ol class="timeline">
+        {% for step in order.timeline %}
+            <li class="timeline__step{% if step.done %} is-done{% endif %}{% if step.current %} is-current{% endif %}">
+                <span class="timeline__marker" aria-hidden="true"></span>
+                <div class="timeline__body">
+                    <h6>{{ step.label }}</h6>
+                    {% if step.at %}
+                        <time datetime="{{ step.at|date:'c' }}">{{ step.at|date:'j M Y, H:i' }}</time>
+                    {% endif %}
+                    {# The blurb explains what is happening now; on steps      #}
+                    {# already behind you it is noise.                          #}
+                    {% if step.current %}<p>{{ step.blurb }}</p>{% endif %}
+                </div>
+                <span class="sr-only">
+                    {% if step.current %}Current step.{% elif step.done %}Completed.{% else %}Not yet reached.{% endif %}
+                </span>
+            </li>
+        {% endfor %}
+    </ol>
+{% endif %}

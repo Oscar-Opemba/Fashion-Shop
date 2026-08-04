@@ -1058,3 +1058,136 @@ img { max-width: 100%; }
 .save-toggle.is-saved { color: var(--accent); }
 
 .saved-lead { color: var(--muted); margin-bottom: 26px; }
+
+/* ---------- Order timeline ---------- */
+/* Drawn as a list with a rule running through the markers rather than as a
+   row of icons, because it has to read the same on a 360px phone as on a
+   desktop and a horizontal stepper does not. */
+
+.order-progress { margin-bottom: 40px; }
+.order-progress > h6 {
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+}
+
+.timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+.timeline__step {
+    position: relative;
+    padding: 0 0 26px 34px;
+}
+
+.timeline__step:last-child { padding-bottom: 0; }
+
+/* The connector. Drawn per-step rather than as one line behind the list, so
+   the segment above a reached step can be coloured independently. */
+.timeline__step::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 18px;
+    bottom: 0;
+    width: 2px;
+    background: var(--line);
+}
+
+.timeline__step:last-child::before { display: none; }
+.timeline__step.is-done::before { background: var(--success); }
+
+.timeline__marker {
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--line-strong);
+    background: var(--bg);
+}
+
+.timeline__step.is-done .timeline__marker {
+    border-color: var(--success);
+    background: var(--success);
+}
+
+/* The step you are on gets a ring rather than a fill — it is where the parcel
+   is now, not somewhere it has been. */
+.timeline__step.is-current .timeline__marker {
+    border-color: var(--accent);
+    background: var(--bg);
+    box-shadow: 0 0 0 4px rgba(168, 65, 42, .14);
+}
+
+.timeline__body h6 {
+    font-size: 15px;
+    margin: 0 0 2px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.timeline__step.is-done .timeline__body h6,
+.timeline__step.is-current .timeline__body h6 { color: var(--ink); }
+.timeline__step.is-current .timeline__body h6 { font-weight: 700; }
+
+.timeline__body time { font-size: 13px; color: var(--muted); }
+.timeline__body p { margin: 6px 0 0; font-size: 14px; color: var(--body); }
+
+.timeline--cancelled { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.timeline__cancelled { margin: 0; color: var(--danger); font-size: 14px; }
+.timeline__cancelled i { margin-right: 6px; }
+
+/* ---------- Track my order ---------- */
+
+.track-lead { color: var(--body); margin-bottom: 26px; }
+
+.track-form {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 26px 26px 8px;
+    background: var(--bg-soft);
+    margin-bottom: 30px;
+}
+
+.track-form .checkout__input input { background: var(--bg); }
+.track-form .site-btn { margin-bottom: 18px; }
+
+.track-result {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 26px;
+}
+
+.track-result__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+}
+
+.track-result__head h4 { margin: 0 0 4px; }
+.track-result__head p { margin: 0; color: var(--muted); font-size: 14px; }
+
+.track-result__note {
+    margin: 24px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* The pill already had colours for the shipped/delivered end of the range;
+   pending and paid were falling through to the neutral default. */
+.status-pill--pending { border-color: var(--line-strong); color: var(--body); }
+.status-pill--paid { border-color: var(--success); color: var(--success); }

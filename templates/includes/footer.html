@@ -27,7 +27,9 @@
                     <ul>
                         <li><a href="{% url 'core:contact' %}">Contact us</a></li>
                         <li><a href="{% url 'core:about' %}">About us</a></li>
-                        <li><a href="{% url 'orders:history' %}">Track my order</a></li>
+                        {# Was pointing at order history, which needs an account — #}
+                        {# and most orders here are placed as a guest.             #}
+                        <li><a href="{% url 'orders:track' %}">Track my order</a></li>
                         <li><a href="{% url 'cart:detail' %}">My cart</a></li>
                     </ul>
                 </div>

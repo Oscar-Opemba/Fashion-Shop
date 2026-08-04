@@ -1,0 +1,25 @@
+{{ site_name }} — order #{{ order.pk }} confirmed
+
+Hi {{ order.full_name }},
+
+Your M-Pesa payment came through. Here is what you bought:
+
+{% for item in items %}  {{ item.quantity }} x {{ item.product.name }}  —  KES {{ item.get_cost|floatformat:2 }}
+{% endfor %}
+  Subtotal                KES {{ order.get_subtotal|floatformat:2 }}
+{% if order.get_discount %}  Discount{% if order.discount_percent %} ({{ order.discount_percent }}%){% endif %}  -KES {{ order.get_discount|floatformat:2 }}
+{% endif %}  Total                   KES {{ order.get_total|floatformat:2 }}
+
+Delivering to:
+  {{ order.full_name }}
+  {{ order.street }}, {{ order.town }}, {{ order.county }}
+  {{ order.phone }}
+
+Nairobi orders arrive within 24 hours. Everywhere else takes 2-4 working days
+by courier, and we will call before the parcel goes out.
+
+You can follow it at any time with your order number ({{ order.pk }}) and the
+phone number above.
+
+Thanks for shopping with us.
+{{ site_name }}

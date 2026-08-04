@@ -3,12 +3,12 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from cart.cart import Cart
 
-from .forms import CouponApplyForm, OrderCreateForm
+from .forms import CouponApplyForm, OrderCreateForm, OrderTrackForm
 from .models import Order, OrderItem
 
 COUPON_SESSION_ID = 'coupon_id'
@@ -62,6 +62,13 @@ def checkout(request):
                     )
                     for item in cart
                 ])
+
+                # The first entry on the timeline. Inside the transaction with
+                # the order itself, because an order with no history at all
+                # would render a blank tracker.
+                order.record_status(
+                    Order.Status.PENDING, 'Order placed, waiting for payment.'
+                )
 
             # Stock is NOT taken here. It comes off when M-Pesa confirms,
             # guarded by order.stock_applied, so an abandoned STK prompt does
@@ -188,3 +195,108 @@ def order_detail(request, order_id):
         pk=order_id, user=request.user,
     )
     return render(request, 'orders/detail.html', {'order': order})
+
+
+# ---------------------------------------------------------------------------
+# Tracking
+#
+# Two ways in, one lookup. `track` is the page a shopper uses; `track_api`
+# answers the same question as JSON and is what the Android app polls.
+# ---------------------------------------------------------------------------
+
+
+def _lookup_order(order_number, phone):
+    """The order, if that number and phone belong together. Otherwise None.
+
+    Deliberately gives the same answer — None — for "no such order" and "wrong
+    phone". Distinguishing them would turn the page into an oracle for which
+    order numbers exist.
+    """
+    order = (
+        Order.objects
+        .filter(pk=order_number)
+        .prefetch_related('events')
+        .first()
+    )
+    if order is None or not order.matches_phone(phone):
+        return None
+    return order
+
+
+def _tracking_payload(order):
+    """What both the page and the app are allowed to know about an order.
+
+    Status, history, and how many items — never the address, the total, or the
+    products. The pair that unlocks this is a phone number, not a password, so
+    what it opens is kept to what a courier would tell you on the phone.
+    """
+    return {
+        'order_number': order.pk,
+        'status': order.status,
+        'status_label': order.get_status_display(),
+        'cancelled': order.is_cancelled,
+        'placed_at': order.created.isoformat(),
+        'item_count': sum(item.quantity for item in order.items.all()),
+        'timeline': [
+            {
+                'status': step['status'],
+                'label': step['label'],
+                'blurb': step['blurb'],
+                'done': step['done'],
+                'current': step['current'],
+                'at': step['at'].isoformat() if step['at'] else None,
+            }
+            for step in order.timeline()
+        ],
+    }
+
+
+def track(request):
+    order = None
+    searched = False
+
+    # GET rather than POST: a tracking lookup reads, it does not change
+    # anything, and a shopper refreshing the page or bookmarking the result
+    # should get their order back rather than a resubmission warning.
+    form = OrderTrackForm(request.GET or None)
+    if request.GET and form.is_valid():
+        searched = True
+        order = _lookup_order(
+            form.cleaned_data['order_number'], form.cleaned_data['phone']
+        )
+        if order is None:
+            messages.error(
+                request,
+                'No order matches that number and phone. Check both and try again.',
+            )
+
+    return render(request, 'orders/track.html', {
+        'form': form,
+        'order': order,
+        'searched': searched,
+    })
+
+
+def track_api(request):
+    """JSON for the Android app's tracker screen.
+
+    Same lookup, same payload, no session. The app polls this while an order is
+    open and raises a local notification when `status` changes — which is why
+    it is a plain unauthenticated read rather than something behind the login
+    the app's WebView happens to hold.
+    """
+    form = OrderTrackForm(request.GET or None)
+    if not form.is_valid():
+        return JsonResponse(
+            {'found': False, 'errors': form.errors}, status=400
+        )
+
+    order = _lookup_order(
+        form.cleaned_data['order_number'], form.cleaned_data['phone']
+    )
+    if order is None:
+        # 404 rather than 200-with-found-false, so the app can tell "no match"
+        # from "the shop is having a bad day" without parsing a body.
+        return JsonResponse({'found': False}, status=404)
+
+    return JsonResponse({'found': True, **_tracking_payload(order)})

@@ -470,3 +470,81 @@ class StatusPollTests(TestCase):
 
         self.assertEqual(data['paid'], True)
         self.assertTrue(data['redirect'].endswith(f'/payments/success/{order_id}/'))
+
+
+@override_settings(ALLOWED_HOSTS=['testserver'], MPESA_CALLBACK_TOKEN=CALLBACK_TOKEN)
+class PaymentSideEffectTests(TestCase):
+    """The timeline entry and the receipt that a confirmed payment triggers."""
+
+    def setUp(self):
+        category = Category.objects.create(name='Shirts')
+        self.product = Product.objects.create(
+            category=category, name='Test Shirt', price=Decimal('1500.00'), stock=10
+        )
+        self.order = Order.objects.create(
+            full_name='Buyer', phone='254712345678', email='buyer@example.com',
+            county='Nairobi', town='T', street='S',
+        )
+        OrderItem.objects.create(
+            order=self.order, product=self.product,
+            price=self.product.price, quantity=2,
+        )
+        MpesaPayment.objects.create(
+            order=self.order, phone=self.order.phone,
+            amount=self.order.get_mpesa_amount(),
+            checkout_request_id='ws_CO_SIDE',
+        )
+
+    def post_callback(self, result_code=0):
+        body = {'Body': {'stkCallback': {
+            'MerchantRequestID': '1-2',
+            'CheckoutRequestID': 'ws_CO_SIDE',
+            'ResultCode': result_code,
+            'ResultDesc': 'ok',
+            'CallbackMetadata': {'Item': [
+                {'Name': 'Amount', 'Value': 3000},
+                {'Name': 'MpesaReceiptNumber', 'Value': 'SFG4SIDEXY'},
+            ]},
+        }}}
+        return self.client.post(
+            f'/payments/callback/{CALLBACK_TOKEN}/',
+            data=json.dumps(body), content_type='application/json',
+        )
+
+    def test_payment_writes_a_timeline_entry(self):
+        self.post_callback()
+
+        self.assertTrue(
+            self.order.events.filter(status=Order.Status.PAID).exists()
+        )
+
+    def test_payment_emails_a_receipt(self):
+        from django.core import mail
+
+        self.post_callback()
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(str(self.order.pk), mail.outbox[0].subject)
+
+    def test_a_replayed_callback_does_not_send_a_second_receipt(self):
+        """Safaricom replays callbacks. One payment, one receipt."""
+        from django.core import mail
+
+        self.post_callback()
+        self.post_callback()
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            self.order.events.filter(status=Order.Status.PAID).count(), 1
+        )
+
+    def test_a_failed_receipt_does_not_lose_the_payment(self):
+        from unittest.mock import patch
+
+        with patch('orders.notifications.send_mail', side_effect=OSError('no relay')):
+            self.post_callback()
+
+        self.order.refresh_from_db()
+        self.product.refresh_from_db()
+        self.assertTrue(self.order.paid)
+        self.assertEqual(self.product.stock, 8)
