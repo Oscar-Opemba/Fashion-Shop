@@ -35,19 +35,21 @@
 }
 
 /* Sign-out has to be a POST, so it is a button styled as the link the theme
-   puts beside it. */
-.header__logout { display: inline; }
+   puts beside it. Spacing is the flex `gap` on .header__top__links now (see
+   refresh.css) rather than a left padding here — with five items in that row
+   a padding only one of them carries makes the gaps uneven. */
+.header__logout { display: contents; }
 
+/* Only the button reset lives here. The size and colour that make it match the
+   links beside it are in refresh.css with the rest of the top bar — stating
+   them here too would just mean this file (which loads later) silently winning
+   and knocking the button 2px out of line with its neighbours. */
 .header__logout button {
     background: none;
     border: 0;
-    padding: 0 0 0 20px;
-    font-size: 14px;
-    color: var(--body);
+    padding: 0;
     cursor: pointer;
 }
-
-.header__logout button:hover { color: var(--accent); }
 
 /* Variants of the theme's own .site-btn. */
 .site-btn--block { width: 100%; }

@@ -194,12 +194,26 @@ img { max-width: 100%; }
 
 .header__top__left p { color: var(--on-dark-muted); font-size: 13px; }
 
+/* Five items now that "Saved" is among them, which overflowed the row and
+   dropped "Sign out" onto a line of its own. A flex row that wraps as a unit
+   keeps the spacing even however many links an account happens to see —
+   a staff user gets one more than a shopper. */
+.header__top__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px 20px;
+    margin-right: 0;
+}
+
 .header__top__links a,
 .header__logout button {
     color: var(--on-dark-muted);
     font-size: 12px;
     letter-spacing: .1em;
-    margin-right: 22px;
+    margin-right: 0;
+    padding: 0;
     transition: color .2s var(--ease);
 }
 
