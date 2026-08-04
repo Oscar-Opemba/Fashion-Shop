@@ -74,6 +74,50 @@ Safaricom must reach the callback on a public https url, so in development run
 `ngrok http 8000` and put the forwarding url in `MPESA_CALLBACK_BASE_URL` and
 `CSRF_TRUSTED_ORIGINS`.
 
+## Reviews and saved items
+
+Any signed-in account can review a product once — 1&ndash;5 stars and an
+optional note. Posting again edits the first review rather than adding a
+second, enforced by a unique constraint on `(product, user)`. Having bought
+the product earns a **Verified purchase** badge, recomputed on every save.
+
+`Product.rating_average` and `rating_count` are denormalised and recalculated
+by a signal on `Review`, not by the model's `save()`/`delete()` — bulk deletes
+from the admin and the cascade when an account is removed both skip those
+methods, and either would leave a product advertising a rating nobody gave it.
+
+Saved items are a per-account list (`WishlistItem`): a heart on every card, a
+`/shop/saved/` page and a count in the header. The toggle answers JSON to
+fetch and a redirect to a plain form post, so it works with JavaScript off.
+
+## Tracking an order
+
+Most orders here are placed as guests, so order history behind a login is not
+enough. `/orders/track/` takes an order number and the phone the order was
+placed with, and shows a timeline built from `OrderStatusEvent` rows — real
+history, not a guess from the current status. Phone numbers are compared on
+the last nine digits, so `0712345678`, `+254712345678` and `254712345678` are
+the same person.
+
+That pair is not a password and is not treated as one. The page and its JSON
+sibling at `/orders/track/api/` return status, timeline and a line count, and
+never the address, total or contents. A wrong phone is indistinguishable from
+a missing order, so the endpoint cannot be used to discover which order
+numbers exist.
+
+Every status change goes through `Order.record_status()` — checkout, the
+M-Pesa callback, and the admin (both the dropdown and the bulk actions). A
+receipt email goes out when payment confirms, guarded against Safaricom's
+callback replays so one payment sends one receipt.
+
+## The Android app
+
+`~/projects/ReactNativeWrapper` is an Expo WebView wrapper around this site,
+built on EAS. It consumes `/orders/track/api/` for a native tracker that
+raises a local notification when an order moves, keeps recently-viewed
+products on the phone so the app still shows something with no signal, and
+shares the current page through the system sheet.
+
 ## Sizes and colours
 
 `Size` and `Colour` are plain lookup tables joined to `Product` many-to-many.

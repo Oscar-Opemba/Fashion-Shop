@@ -2343,9 +2343,12 @@ is nearly always where the mistake is.
       it is what the live site runs on. Moving to PostgreSQL — or MySQL — means
       a paid host: PythonAnywhere's free tier offers neither (see `DEPLOY.md`)
 - [ ] `python manage.py collectstatic`, and let the web server serve `staticfiles/`
+- [ ] `python manage.py optimize_images` once, to bring photos uploaded before
+      the on-upload downscaler in line (it is idempotent — safe to re-run)
+- [ ] Real SMTP if you want the order receipt to actually reach anyone; on the
+      console backend it prints to the server log and nothing is sent
 - [ ] `templates/404.html` and friends — with `DEBUG=False` a wrong url gets
       Django's bare grey page unless you supply your own (below)
-- [ ] Real SMTP instead of the console email backend
 - [ ] `MPESA_ENV=production` with production Daraja credentials
 - [ ] `MPESA_CALLBACK_BASE_URL` on the real https domain, and a long random
       `MPESA_CALLBACK_TOKEN`
