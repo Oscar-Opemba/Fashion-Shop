@@ -35,9 +35,14 @@
                                     <div class="card-body">
                                         <div class="shop__sidebar__categories">
                                             <ul class="nice-scroll">
-                                                <li><a href="{% url 'shop:product_list' %}">All products</a></li>
+                                                <li><a href="{% url 'shop:product_list' %}"
+                                                       class="{% if not active_category %}is-active{% endif %}">All products</a></li>
                                                 {% for category in categories %}
-                                                    <li><a href="{{ category.get_absolute_url }}">{{ category.name }} ({{ category.product_count }})</a></li>
+                                                    <li>
+                                                        <a href="{{ category.get_absolute_url }}"
+                                                           class="{% if category == active_category %}is-active{% endif %}"
+                                                           {% if category == active_category %}aria-current="true"{% endif %}>{{ category.name }} ({{ category.product_count }})</a>
+                                                    </li>
                                                 {% endfor %}
                                             </ul>
                                         </div>
@@ -53,7 +58,11 @@
                                         <div class="shop__sidebar__price">
                                             <ul>
                                                 {% for band in price_bands %}
-                                                    <li><a href="?{{ band.query }}">{{ band.label }}</a></li>
+                                                    <li>
+                                                        <a href="?{{ band.query }}"
+                                                           class="{% if band.active %}is-active{% endif %}"
+                                                           {% if band.active %}aria-current="true"{% endif %}>{{ band.label }}</a>
+                                                    </li>
                                                 {% endfor %}
                                             </ul>
                                         </div>
@@ -120,6 +129,27 @@
                 </div>
             </div>
             <div class="col-lg-9">
+                {% comment %}What is currently narrowing the grid, and a way out
+                of each. Without this the four sidebar facets could all be
+                active with nothing above the results saying so.{% endcomment %}
+                {% if active_filters %}
+                    <div class="filter-summary">
+                        <span class="filter-summary__label">Filtered by</span>
+                        {% for chip in active_filters %}
+                            <a class="filter-chip" href="?{{ chip.query }}">
+                                {% if chip.swatch %}
+                                    <span class="filter-chip__swatch" style="background: {{ chip.swatch }}"></span>
+                                {% endif %}
+                                {{ chip.label }}
+                                <span class="filter-chip__x" aria-hidden="true">&times;</span>
+                                <span class="sr-only">— remove this filter</span>
+                            </a>
+                        {% endfor %}
+                        {% if active_filters|length > 1 %}
+                            <a class="filter-summary__clear" href="?{{ clear_query }}">Clear all</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
                 <div class="shop__product__option">
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-6">
@@ -160,8 +190,15 @@
                         </div>
                     {% empty %}
                         <div class="col-lg-12">
-                            <p>Nothing matched{% if query %} &ldquo;{{ query }}&rdquo;{% endif %}.
-                                <a href="{% url 'shop:product_list' %}">Clear filters</a></p>
+                            <p class="empty-state">
+                                Nothing matched{% if query %} &ldquo;{{ query }}&rdquo;{% endif %}.
+                                {% if active_filters %}
+                                    Try lifting a filter, or
+                                    <a href="{% url 'shop:product_list' %}">start again</a>.
+                                {% else %}
+                                    <a href="{% url 'shop:product_list' %}">Browse everything</a>.
+                                {% endif %}
+                            </p>
                         </div>
                     {% endfor %}
                 </div>

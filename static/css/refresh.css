@@ -1,0 +1,930 @@
+/* =========================================================================
+   Visual refresh over the MaleFashion theme.
+
+   Load order is style.css → refresh.css → storefront.css. The theme's own
+   files are still never edited; this sheet restyles it from the outside and
+   storefront.css keeps the last word for the markup it owns.
+
+   The split is on purpose. storefront.css bridges gaps — a POST button where
+   the theme drew a link, a page the theme never shipped. This file changes
+   how the shop *looks*: palette, type scale, card and button treatment. Two
+   different jobs, so two files, and the tokens below are the seam between
+   them.
+
+   ---- The palette ----
+
+   The theme is a cool grey shell (#111 / #b7b7b7 / #e1e1e1) with a hot red
+   accent. Against real product photography — camel, olive, tan leather, navy
+   — the cool greys read as dirty. Everything here is warmed a few degrees to
+   sit under those photographs instead of fighting them.
+
+   Contrast against white was checked rather than eyeballed:
+
+       --ink      18.5:1   --accent   6.1:1
+       --body      8.4:1   --success  5.1:1
+       --muted     4.9:1   --danger   6.5:1
+
+   Two of those are fixes, not preferences. The theme's #b7b7b7 muted text is
+   2.0:1 — below the 4.5:1 floor for body copy, and it was carrying real
+   content (review dates, form hints, footer links). Its #e53637 accent is
+   4.27:1, which also misses. --accent is dark enough to pass both as text on
+   white and as a button fill under white text, so one token does both jobs.
+   ========================================================================= */
+
+:root {
+    /* Ink */
+    --ink: #171310;
+    --body: #554c44;
+    --muted: #7a6f65;
+    --on-dark: #ffffff;
+    --on-dark-muted: #b9ada1;
+
+    /* Surface */
+    --bg: #ffffff;
+    --bg-soft: #faf7f3;
+    --bg-dark: #171310;
+    --line: #e8e2db;
+    --line-strong: #d5ccc2;
+
+    /* Accent and status */
+    --accent: #a8412a;
+    --accent-dark: #8c3421;
+    --accent-wash: #fbf1ed;
+    --success: #2e7d32;
+    --danger: #b3261e;
+    --star: #d98324;
+
+    /* Shape. The theme is uniformly square; a small radius is enough to
+       soften it without turning it into a different template. */
+    --radius: 4px;
+    --radius-lg: 8px;
+
+    --shadow-sm: 0 1px 2px rgba(23, 19, 16, .05);
+    --shadow: 0 6px 20px -8px rgba(23, 19, 16, .18);
+    --shadow-lg: 0 18px 40px -18px rgba(23, 19, 16, .28);
+
+    --ease: cubic-bezier(.2, .7, .3, 1);
+}
+
+/* ---------- Base ---------- */
+
+body {
+    color: var(--body);
+    font-size: 15px;
+    line-height: 1.7;
+    background: var(--bg);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    line-height: 1.2;
+}
+
+/* The theme's h1 is 70px flat, which overflows a phone. Every heading is
+   given a viewport-aware clamp so the scale holds from 360px up. */
+h1 { font-size: clamp(34px, 6vw, 62px); letter-spacing: -.025em; }
+h2 { font-size: clamp(26px, 4vw, 36px); letter-spacing: -.02em; }
+h3 { font-size: clamp(21px, 3vw, 28px); letter-spacing: -.015em; }
+h4 { font-size: clamp(18px, 2.4vw, 22px); }
+h5 { font-size: 17px; }
+h6 { font-size: 15px; }
+
+p { margin-bottom: 1rem; }
+
+a {
+    color: var(--accent);
+    transition: color .2s var(--ease);
+}
+
+a:hover, a:focus { color: var(--accent-dark); text-decoration: none; }
+
+/* The theme leaves focus to the browser's default outline, which its own
+   `outline: none` rules then remove in several places. One visible ring for
+   keyboard users, everywhere, and it must beat those rules. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--accent) !important;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+::selection { background: var(--accent); color: var(--on-dark); }
+
+/* The theme pads every section 100px top and bottom at all widths, which on
+   a phone is most of a screen of nothing. */
+.spad { padding-top: clamp(48px, 8vw, 100px); padding-bottom: clamp(48px, 8vw, 100px); }
+
+img { max-width: 100%; }
+
+/* ---------- Buttons ---------- */
+/* Both of the theme's button classes are flat black rectangles with 4px of
+   tracking. Kept dark and confident, but given shape, a hover that responds,
+   and a real disabled state — shop.js disables the add-to-cart button while
+   its request is in flight and the theme had nothing to show for it. */
+
+.primary-btn,
+.site-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 15px 30px;
+    color: var(--on-dark);
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-align: center;
+    transition: background .2s var(--ease), border-color .2s var(--ease),
+                transform .12s var(--ease), box-shadow .2s var(--ease);
+}
+
+.primary-btn:hover,
+.site-btn:hover {
+    color: var(--on-dark);
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: var(--shadow);
+}
+
+.primary-btn:active,
+.site-btn:active { transform: translateY(1px); box-shadow: none; }
+
+.primary-btn:disabled,
+.site-btn:disabled,
+.primary-btn[disabled],
+.site-btn[disabled] {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* A quieter second action, for pairs like "Continue shopping / Empty cart"
+   where the theme gave both the same weight and left the shopper to guess. */
+.btn--ghost,
+.btn--ghost:hover {
+    color: var(--ink);
+    background: transparent;
+    border-color: var(--line-strong);
+    box-shadow: none;
+}
+
+.btn--ghost:hover { border-color: var(--ink); background: var(--bg-soft); }
+
+/* ---------- Header ---------- */
+
+.header { background: var(--bg); }
+
+.header__top {
+    background: var(--bg-dark);
+    padding: 9px 0;
+    font-size: 13px;
+}
+
+.header__top__left p { color: var(--on-dark-muted); font-size: 13px; }
+
+.header__top__links a,
+.header__logout button {
+    color: var(--on-dark-muted);
+    font-size: 12px;
+    letter-spacing: .1em;
+    margin-right: 22px;
+    transition: color .2s var(--ease);
+}
+
+.header__top__links a:hover,
+.header__logout button:hover { color: var(--on-dark); }
+
+/* The masthead sticks so the cart and search stay reachable down a long
+   grid. Pure CSS — no scroll listener. */
+.header__inner {
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+}
+
+.header__logo { padding: 22px 0; }
+.header__menu { padding: 20px 0; }
+
+.header__menu ul li { margin-right: 38px; }
+
+.header__menu ul li a {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    padding: 6px 0;
+}
+
+.header__menu ul li a:hover,
+.header__menu ul li.active > a { color: var(--accent); }
+
+.header__menu ul li .dropdown {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 6px 0;
+}
+
+.header__menu ul li .dropdown li a { padding: 6px 20px; font-weight: 400; }
+
+.header__nav__option { padding: 22px 0; display: flex; align-items: center; justify-content: flex-end; gap: 22px; }
+
+.header__nav__option a { margin-right: 0; display: inline-flex; }
+
+/* The theme drops the count as bare 11px text on top of the cart glyph, where
+   it collides with the artwork as soon as it reaches two digits. */
+.header__nav__option a span {
+    position: absolute;
+    left: auto;
+    right: -9px;
+    top: -7px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: var(--on-dark);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    border-radius: 999px;
+}
+
+.header__nav__option .price {
+    margin-left: 0;
+    top: 0;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* ---------- Breadcrumb ---------- */
+
+.breadcrumb-option {
+    background: var(--bg-soft);
+    border-bottom: 1px solid var(--line);
+    padding: clamp(28px, 4vw, 44px) 0;
+}
+
+.breadcrumb__text h4 { color: var(--ink); margin-bottom: 6px; }
+
+.breadcrumb__links a,
+.breadcrumb__links span { font-size: 14px; }
+
+.breadcrumb__links a { color: var(--body); }
+.breadcrumb__links a:hover { color: var(--accent); }
+.breadcrumb__links span { color: var(--muted); }
+
+/* ---------- Product card ---------- */
+/* The theme's card is hover-driven: the link to the product slides in from
+   `right: -200px`, and the title fades to `opacity: 0` so an "Add To Cart"
+   anchor can fade in over it. On a touch screen none of that ever fires, so
+   the grid had no way into a product and no way to add one.
+
+   Rebuilt so the picture and the title are both plain links that work on any
+   device, and the add-to-cart button is a real element under the price rather
+   than something stacked on top of the title. */
+
+.product__item {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 30px);
+    transition: border-color .25s var(--ease), box-shadow .25s var(--ease), transform .25s var(--ease);
+}
+
+.product__item:hover {
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow);
+    transform: translateY(-3px);
+}
+
+/* The theme paints card images as CSS backgrounds applied by main.js from a
+   `data-setbg` attribute. That means no image at all until jQuery has run,
+   nothing for a crawler to read, and no native lazy-loading. A real <img> in
+   a fixed-ratio box does the same job with none of that. */
+.product__item__pic {
+    height: 0;
+    padding-bottom: 118%;
+    background: var(--bg-soft);
+    display: block;
+    position: relative;
+    overflow: hidden;
+}
+
+.product__item__pic img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .5s var(--ease);
+}
+
+.product__item:hover .product__item__pic img { transform: scale(1.04); }
+
+/* The whole picture is the link now, so the hover icon list the theme used to
+   fly in is redundant. */
+.product__item__pic .product__hover { display: none; }
+
+.product__item__pic .label {
+    top: 12px;
+    left: 12px;
+    padding: 5px 12px 4px;
+    background: var(--ink);
+    color: var(--on-dark);
+    border-radius: 999px;
+    font-size: 10px;
+    letter-spacing: .14em;
+    z-index: 2;
+}
+
+.product__item.out-of-stock .product__item__pic { opacity: .62; }
+
+.product__item__text {
+    padding: 16px 18px 18px;
+    position: static;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    gap: 4px;
+}
+
+/* Undo the theme's absolute overlay treatment of any <a> in this block —
+   that rule is what made a linked title invisible. */
+.product__item__text a {
+    position: static;
+    opacity: 1;
+    visibility: visible;
+    top: auto;
+    left: auto;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+}
+
+.product__item__text h6 { margin-bottom: 0; font-size: 15px; font-weight: 600; }
+
+/* ...including the fade-out on hover. */
+.product__item:hover .product__item__text h6 { opacity: 1; }
+
+.product__item__text h6 a { color: var(--ink); }
+.product__item__text h6 a:hover { color: var(--accent); }
+
+.product__item__text .product__card__meta {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.product__item__text h5 {
+    color: var(--ink);
+    font-size: 17px;
+    font-weight: 700;
+    margin: 2px 0 0;
+}
+
+/* Push the button to the bottom edge so a two-line title in one card does not
+   leave its neighbour's button floating higher up the row. */
+.product__item__text .product__card__action { margin-top: auto; padding-top: 14px; }
+
+.product__item__text .add-cart {
+    position: static;
+    opacity: 1;
+    visibility: visible;
+    display: block;
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    text-align: center;
+    cursor: pointer;
+    transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+}
+
+.product__item__text button.add-cart:hover {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--on-dark);
+}
+
+.product__item__text button.add-cart:disabled { opacity: .55; cursor: wait; }
+
+.product__item__text span.add-cart {
+    color: var(--muted);
+    background: transparent;
+    cursor: default;
+}
+
+.product__item__text .rating i { color: var(--line-strong); font-size: 12px; }
+.product__item__text .rating i.is-filled { color: var(--star); }
+
+/* ---------- Shop listing ---------- */
+
+.shop__sidebar__search form {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.shop__sidebar__search form input {
+    flex: 1 1 auto;
+    border: 0;
+    height: 46px;
+    padding: 0 14px;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.shop__sidebar__search form button {
+    border: 0;
+    background: var(--bg-soft);
+    color: var(--ink);
+    padding: 0 16px;
+    cursor: pointer;
+}
+
+.shop__sidebar__search form button:hover { background: var(--ink); color: var(--on-dark); }
+
+.shop__sidebar__accordion .card-heading a {
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .1em;
+}
+
+.shop__sidebar__categories ul li a,
+.shop__sidebar__price ul li a {
+    color: var(--body);
+    font-size: 14px;
+    transition: color .2s var(--ease);
+}
+
+.shop__sidebar__categories ul li a:hover,
+.shop__sidebar__price ul li a:hover { color: var(--accent); }
+
+/* The sidebar marked the active size and colour but never the active category
+   or price band, so two of the four facets gave no feedback at all. */
+.shop__sidebar__categories ul li a.is-active,
+.shop__sidebar__price ul li a.is-active {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.shop__sidebar__tags a {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--body);
+    font-size: 12px;
+    padding: 6px 15px;
+    background: var(--bg);
+    transition: all .2s var(--ease);
+}
+
+.shop__sidebar__tags a:hover { border-color: var(--ink); color: var(--ink); }
+
+.shop__product__option {
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 30px;
+}
+
+.shop__product__option__left p { margin-bottom: 0; color: var(--body); }
+.shop__product__option__right p { color: var(--muted); }
+
+.product__pagination a {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--body);
+    min-width: 42px;
+    height: 42px;
+    line-height: 40px;
+    text-align: center;
+    margin-right: 8px;
+    transition: all .2s var(--ease);
+}
+
+.product__pagination a:hover { border-color: var(--ink); color: var(--ink); }
+
+.product__pagination a.active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--on-dark);
+}
+
+/* ---------- Active filter chips ---------- */
+/* New: the listing could be filtered four ways at once with nothing on the
+   page saying so, and no way back except finding the right sidebar link. */
+
+.filter-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.filter-summary__label {
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-wash);
+    border: 1px solid #f0dcd4;
+    border-radius: 999px;
+    padding: 5px 13px;
+    font-size: 13px;
+    color: var(--accent-dark);
+    transition: all .2s var(--ease);
+}
+
+.filter-chip:hover { background: var(--accent); border-color: var(--accent); color: var(--on-dark); }
+
+.filter-chip__swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(23, 19, 16, .2);
+    display: inline-block;
+}
+
+/* Drawn rather than a glyph, so it does not depend on the icon fonts. */
+.filter-chip__x { font-size: 15px; line-height: 1; opacity: .7; }
+.filter-chip:hover .filter-chip__x { opacity: 1; }
+
+.filter-summary__clear {
+    font-size: 13px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line-strong);
+}
+
+.filter-summary__clear:hover { color: var(--ink); border-color: var(--ink); }
+
+/* ---------- Product detail ---------- */
+/* The template puts the gallery and the buy box in one row now (see the note
+   at the top of product_detail.html). The theme's `.product__details__pic` was
+   a full-bleed band — centred, tinted, 100px of margin under it — which only
+   made sense while it owned the whole width. */
+
+.product-detail { padding-bottom: clamp(40px, 6vw, 70px); }
+
+.product__details__breadcrumb { padding: 26px 0 22px; margin-bottom: 0; }
+.product__details__breadcrumb a { color: var(--body); font-size: 14px; }
+.product__details__breadcrumb span { color: var(--muted); font-size: 14px; }
+
+/* Capped rather than filling the column: 4:5 of a full 650px column is over
+   800px tall and pushes the buy box back off the fold, which is the problem
+   this page was rearranged to fix. Capping the width keeps the frame and the
+   thumbnail strip under it the same size as each other. */
+.product__details__pic {
+    background: transparent;
+    padding: 0;
+    margin-bottom: 0;
+    text-align: left;
+    max-width: 480px;
+}
+
+/* Catalogue photography arrives at whatever shape the supplier sent, so the
+   frame is fixed and the picture is fitted inside it. `contain` rather than
+   `cover`: these are studio shots on white, and cropping one to fill a 4:5
+   box lops the shoes off a model. */
+.product__details__pic__item {
+    aspect-ratio: 4 / 5;
+    background: var(--bg-soft);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.product__details__pic__item img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* The thumbnails are a strip under the image now (see product_detail.html).
+   The theme pins the rail to a hard 105px wide and stacks the items, both of
+   which have to go. */
+.product__details__pic .product__thumbs {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    border-bottom: 0;
+}
+
+.product__details__pic .product__thumbs .nav-item { margin-bottom: 0; }
+
+.product__details__pic .product__thumbs .nav-item .nav-link .product__thumb__pic {
+    width: 76px;
+    height: 92px;
+    border-radius: var(--radius);
+    background-size: cover;
+    background-position: center;
+    background-color: var(--bg-soft);
+    opacity: .72;
+    transition: opacity .2s var(--ease), outline-color .2s var(--ease);
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+
+.product__details__pic .product__thumbs .nav-link:hover .product__thumb__pic { opacity: 1; }
+
+.product__details__pic .product__thumbs .nav-link.active .product__thumb__pic {
+    opacity: 1;
+    outline-color: var(--ink);
+}
+
+/* The theme centres this block, which reads fine as a full-width strip under
+   a picture and badly as a column beside one. */
+.product__details__text { padding-top: 4px; text-align: left; }
+
+.product__details__text h4 { margin-bottom: 8px; }
+
+.product__details__text h3 {
+    color: var(--ink);
+    font-size: clamp(24px, 3vw, 30px);
+    margin-bottom: 10px;
+}
+
+.product__details__cart__option { display: flex; align-items: center; gap: 14px; margin-top: 24px; }
+
+.product__details__cart__option .quantity { margin: 0; }
+
+.product__details__cart__option .quantity input {
+    width: 76px;
+    height: 50px;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.product__details__cart__option .primary-btn { flex: 1 1 auto; padding: 16px 24px; }
+
+.product__details__option { margin-top: 22px; }
+.product__details__option span { color: var(--muted); font-size: 13px; }
+
+@media (max-width: 991px) {
+    /* One column each is too narrow below this, so the gallery goes back on
+       top — but as a normal block, not the theme's tinted full-bleed band. */
+    .product__details__pic { margin-bottom: 34px; }
+}
+
+.product__details__desc { color: var(--body); }
+
+/* Without its "Guaranteed Safe Checkout" heading this block keeps the theme's
+   padding for it, which leaves a gap the size of a missing element. */
+.product__details__last__option {
+    border-top: 1px solid var(--line);
+    padding: 20px 0 0;
+    margin-top: 26px;
+}
+
+/* `padding-top: 40px` in the theme was clearing the heading and its two rule
+   lines. Both are gone, so the padding is only a hole. */
+.product__details__last__option ul { margin: 0; padding-top: 0; }
+.product__details__last__option ul li { color: var(--muted); font-size: 14px; line-height: 1.9; }
+.product__details__last__option ul li span { color: var(--ink); }
+
+/* The theme's "Guaranteed Safe Checkout" strip is a bitmap of Stripe, PayPal,
+   Visa, Mastercard, Amex, Discover and Shopify logos. This shop settles over
+   M-Pesa and nothing else, so the strip was asserting seven payment methods
+   that would all fail at checkout. Replaced by a written statement. */
+.pay-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-top: 26px;
+}
+
+/* Safaricom's green with the logo's white lettering is only 2.81:1, which is
+   not readable at 11px. The green is what makes the badge recognisable, so it
+   stays and the text goes dark instead — 6.58:1. */
+.pay-note__mark {
+    flex: 0 0 auto;
+    background: #43b02a;
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    padding: 4px 9px;
+    border-radius: 3px;
+    line-height: 1.4;
+}
+
+.pay-note p { margin: 0; font-size: 14px; color: var(--body); }
+.pay-note strong { color: var(--ink); }
+
+.product__details__tab .nav-tabs { border-bottom: 1px solid var(--line); }
+
+.product__details__tab .nav-link { color: var(--muted); font-weight: 700; }
+.product__details__tab .nav-link.active { color: var(--ink); }
+
+/* ---------- Cart ---------- */
+
+.shopping__cart__table table thead th {
+    color: var(--ink);
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 14px;
+}
+
+.shopping__cart__table table tbody tr td { border-bottom: 1px solid var(--line); padding: 20px 0; }
+
+/* The theme shipped pre-cropped 90px thumbnails in its markup and never wrote
+   a rule for them, so an uploaded image rendered at its natural size — often
+   several hundred pixels tall, shoving the name and unit price out of the
+   row. */
+.product__cart__item__pic {
+    width: 90px;
+    margin-right: 20px;
+}
+
+.product__cart__item__pic img {
+    width: 90px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: var(--radius);
+    background: var(--bg-soft);
+    display: block;
+}
+
+.product__cart__item__text { padding-top: 4px; }
+.product__cart__item__text h6 { margin-bottom: 4px; }
+.product__cart__item__text h5 { color: var(--muted); font-size: 14px; font-weight: 400; }
+
+.cart__price { color: var(--ink); font-weight: 700; }
+
+.cart__discount input {
+    border: 1px solid var(--line);
+    border-radius: var(--radius) 0 0 var(--radius);
+    height: 50px;
+}
+
+.cart__discount button { border-radius: 0 var(--radius) var(--radius) 0; }
+
+.cart__total,
+.checkout__order {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+}
+
+.cart__total ul li,
+.checkout__total__all li { color: var(--body); }
+.cart__total ul li span,
+.checkout__total__all li span { color: var(--accent); font-weight: 700; }
+
+/* On a phone the summary is the thing you are trying to reach; on a desktop
+   it should stay beside the list while you scroll it. */
+@media (min-width: 992px) {
+    .cart__total-wrap { position: sticky; top: 120px; }
+}
+
+/* ---------- Forms ---------- */
+
+.checkout__input input,
+.checkout__input select,
+.checkout__input textarea,
+.manage__field input,
+.manage__field textarea,
+.manage__field select {
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius);
+    color: var(--ink);
+    background: var(--bg);
+    transition: border-color .2s var(--ease), box-shadow .2s var(--ease);
+}
+
+.checkout__input input:focus,
+.checkout__input select:focus,
+.checkout__input textarea:focus,
+.manage__field input:focus,
+.manage__field textarea:focus,
+.manage__field select:focus {
+    border-color: var(--ink) !important;
+    box-shadow: 0 0 0 3px rgba(168, 65, 42, .12);
+}
+
+::placeholder { color: var(--muted); opacity: 1; }
+
+.checkout__input label { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+
+/* The allauth templates loop over the form and wrap every field the same way,
+   so "Remember Me" gets a block label with the tick box underneath it — the
+   caption reads as a heading for the empty space beside it. Matched on the
+   field type rather than on a class, since the loop cannot know which is
+   which. `row-reverse` puts the box first without reordering the markup, so
+   the label still labels the control it follows. */
+.checkout__input:has(> input[type="checkbox"]) {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 20px;
+}
+
+.checkout__input:has(> input[type="checkbox"]) label { margin: 0; font-weight: 400; }
+.checkout__input:has(> input[type="checkbox"]) input[type="checkbox"] { margin: 0; }
+
+/* ---------- Footer ---------- */
+
+.footer { background: var(--bg-dark); padding-top: 64px; }
+
+.footer__about p,
+.footer__widget ul li a,
+.footer__widget .footer__newslatter p,
+.footer__copyright__text p { color: var(--on-dark-muted); }
+
+.footer__widget ul li a:hover { color: var(--on-dark); }
+
+.footer__widget h6 { color: var(--on-dark); letter-spacing: .12em; }
+
+/* The theme sets both the newsletter field's text and its placeholder to
+   #3d3d3d — near-invisible on the #111 footer. */
+.footer__widget .footer__newslatter form input {
+    color: var(--on-dark);
+    border-bottom: 1px solid rgba(255, 255, 255, .35);
+}
+
+.footer__widget .footer__newslatter form input::placeholder { color: var(--on-dark-muted); }
+.footer__widget .footer__newslatter form input:focus { border-bottom-color: var(--on-dark); }
+.footer__widget .footer__newslatter form button { color: var(--on-dark-muted); cursor: pointer; }
+.footer__widget .footer__newslatter form button:hover { color: var(--on-dark); }
+
+.footer__copyright__text p i,
+.footer__copyright__text p a { color: #e8967f; }
+
+/* ---------- Motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .product__item:hover { transform: none; }
+    .product__item:hover .product__item__pic img { transform: none; }
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 767px) {
+    .header__top { text-align: center; }
+    .header__top__right { text-align: center; }
+    .header__top__links a, .header__logout button { margin: 0 10px; }
+    .header__logo { padding: 16px 0; }
+    .header__nav__option { padding: 16px 0; }
+
+    /* The theme hides the price beside the cart glyph at this width by
+       accident of layout; showing the count alone is clearer anyway. */
+    .header__nav__option .price { display: none; }
+
+    .product__item__text { padding: 14px; }
+    .shop__product__option__right { text-align: left; margin-top: 10px; }
+}

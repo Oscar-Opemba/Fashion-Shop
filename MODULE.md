@@ -434,7 +434,8 @@ Instead, add one file of your own and load it **last**:
 
 ```
 static/css/style.css          ← theirs, never touched
-static/css/storefront.css     ← yours, loaded after, so it wins
+static/css/refresh.css        ← yours, loaded after, so it wins
+static/css/storefront.css     ← yours, loaded last of all
 static/js/main.js             ← theirs, never touched
 static/js/shop.js             ← yours, layered on top
 ```
@@ -442,8 +443,23 @@ static/js/shop.js             ← yours, layered on top
 Because CSS applies the last matching rule, loading your file after theirs is
 all the "override" mechanism you need.
 
-`storefront.css` in this project is deliberately **not a restyle**. It covers
-exactly two things:
+Two files of your own rather than one, because they answer different questions
+and change at different times:
+
+**`refresh.css` — what the shop looks like.** The palette, the type scale, the
+button and card treatment. It also defines the palette once, at the top, as
+custom properties:
+
+```css
+:root {
+    --ink: #171310;      /* headings, strong text */
+    --body: #554c44;     /* body copy            */
+    --accent: #a8412a;   /* brand accent          */
+    /* ...and a dozen more */
+}
+```
+
+**`storefront.css` — markup the theme never had.** Two kinds:
 
 1. Places where the theme uses a link (`<a>`) but a real shop needs a form POST
    — add to cart, sign out. A `<button>` inside a form has to be made to look
@@ -451,8 +467,20 @@ exactly two things:
 2. Pages the theme never shipped: order history, sign-in, the address book,
    the M-Pesa result pages, the 404.
 
-Every colour in it is lifted from the theme (`#111` text, `#e53637` accent), so
-the new pages look like they came in the same zip.
+It writes its colours as `var(--ink)`, `var(--accent)` and so on, so a page the
+theme shipped and a page you wrote cannot drift apart — change the token once
+and both follow.
+
+> This started as one file with the theme's own colours hard-coded into it, on
+> the reasoning that matching the template exactly was the safest thing to do.
+> Two of those colours turned out to be worth *not* matching. The theme's muted
+> grey `#b7b7b7` is 2.0:1 against white — it was carrying form hints and review
+> dates below the 4.5:1 readability floor — and its `#e53637` red is 4.27:1,
+> which also misses. Inheriting a decision is not the same as checking it.
+>
+> The practical lesson is the tokens. Once the palette lives in one `:root`
+> block, "make the muted grey readable" is a one-line change instead of a
+> forty-place find-and-replace across two files.
 
 > One failure mode to watch for, because it is silent. Rename a class in a
 > template and the css does not complain — the old rules just stop matching
@@ -525,7 +553,8 @@ where pages differ:
 <head>
     <title>{% block title %}Shop{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    {# Loaded last so it wins over the theme without editing the theme's files. #}
+    {# Ours load after the theme, so they win without editing it. #}
+    <link rel="stylesheet" href="{% static 'css/refresh.css' %}">
     <link rel="stylesheet" href="{% static 'css/storefront.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
@@ -585,6 +614,23 @@ includes/social_login.html    the Google / Facebook buttons
 `product_card.html` earns its keep: the same card appears on the homepage, the
 listing and the related-products strip. One file, three uses — change the card
 once and it changes everywhere.
+
+> It also earned its keep the hard way. The theme's card hid both of its
+> actions behind `:hover` — the link to the product slid in from `right:
+> -200px`, and the title faded to `opacity: 0` so an "Add To Cart" anchor could
+> fade in over the top of it. It demos beautifully with a mouse.
+>
+> A touch screen has no hover. On a phone the grid had no way to open a product
+> and no way to add one — the two things a shop grid is for. Nothing errored,
+> nothing looked broken in a desktop browser, and the site had been deployed
+> like that.
+>
+> Because every card came from this one include, the fix was one file. If those
+> twenty-four lines had been pasted into `home.html`, `product_list.html` and
+> `product_detail.html`, it would have been three files and a good chance of
+> missing one. **Anything decorative that only appears on `:hover` should have
+> a non-hover way to reach it.** Test with a finger, or at least with the
+> keyboard — `Tab` finds the same holes touch does.
 
 A leading underscore (`cart/_summary.html`) marks a **fragment** — something
 rendered into another page or returned by AJAX, never served as a page itself.

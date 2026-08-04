@@ -47,27 +47,122 @@ def facet_links(request, param, options):
     return links
 
 
+def money(value):
+    """`2000` or the string `'2000'` -> `'2,000'`.
+
+    The bands above pass ints; the chip builder passes whatever was in the
+    url, which may be junk. Junk is shown back verbatim rather than raising —
+    it is already being ignored by the filtering itself.
+    """
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return f'{number:,.0f}' if number == int(number) else f'{number:,.2f}'
+
+
+def price_band_label(low, high):
+    if low is None:
+        return f'Under KES {money(high)}'
+    if high is None:
+        return f'KES {money(low)}+'
+    return f'KES {money(low)} - {money(high)}'
+
+
 def price_band_links(request):
     """Build the sidebar's price links, keeping any other active filters."""
+    current = (
+        request.GET.get('min_price', '').strip(),
+        request.GET.get('max_price', '').strip(),
+    )
     links = []
     for low, high in PRICE_BANDS:
         params = request.GET.copy()
         for key in ('page', 'min_price', 'max_price'):
             params.pop(key, None)
-        if low is not None:
-            params['min_price'] = low
-        if high is not None:
-            params['max_price'] = high
 
-        if low is None:
-            label = f'Under KES {high:,}'
-        elif high is None:
-            label = f'KES {low:,}+'
-        else:
-            label = f'KES {low:,} - {high:,}'
+        # A band is showing if the url carries exactly its bounds. Comparing
+        # as strings keeps `?min_price=2000` and `?min_price=2000.0` from
+        # looking like different bands to the shopper.
+        is_active = current == (
+            str(low) if low is not None else '',
+            str(high) if high is not None else '',
+        )
 
-        links.append({'label': label, 'query': params.urlencode()})
+        # Clicking the band you are already on clears it, the same way the
+        # size and colour facets behave.
+        if not is_active:
+            if low is not None:
+                params['min_price'] = low
+            if high is not None:
+                params['max_price'] = high
+
+        links.append({
+            'label': price_band_label(low, high),
+            'query': params.urlencode(),
+            'active': is_active,
+        })
     return links
+
+
+def drop_params(request, *keys):
+    """The current querystring without `keys` (or `page`).
+
+    Used by the chips above the grid, each of which removes one filter and
+    leaves the others alone.
+    """
+    params = request.GET.copy()
+    for key in keys + ('page',):
+        params.pop(key, None)
+    return params.urlencode()
+
+
+def active_filter_chips(request, active_category, active_size, active_colour, query):
+    """Describe every filter currently narrowing the grid.
+
+    The sidebar could be carrying four filters at once with nothing above the
+    results saying so, and no way to lift one without hunting for the link
+    that set it. Each chip names a filter and links to the listing without it.
+    """
+    chips = []
+
+    if query:
+        chips.append({
+            'label': f'Search: {query}',
+            'query': drop_params(request, 'q'),
+        })
+
+    if active_category:
+        chips.append({
+            'label': active_category.name,
+            'query': drop_params(request, 'category'),
+        })
+
+    if active_size:
+        chips.append({
+            'label': f'Size {active_size.name}',
+            'query': drop_params(request, 'size'),
+        })
+
+    if active_colour:
+        chips.append({
+            'label': active_colour.name,
+            'swatch': active_colour.hex_value,
+            'query': drop_params(request, 'colour'),
+        })
+
+    # Price is two parameters but reads as one filter, so it gets one chip
+    # that clears both. An unrecognised pair still gets a chip — a
+    # hand-edited url must be as easy to escape as one we rendered.
+    low = request.GET.get('min_price', '').strip()
+    high = request.GET.get('max_price', '').strip()
+    if low or high:
+        chips.append({
+            'label': price_band_label(low or None, high or None),
+            'query': drop_params(request, 'min_price', 'max_price'),
+        })
+
+    return chips
 
 
 def product_list(request):
@@ -143,6 +238,14 @@ def product_list(request):
         ),
         'active_size': active_size,
         'active_colour': active_colour,
+        'active_filters': active_filter_chips(
+            request, active_category, active_size, active_colour, query
+        ),
+        # "Clear all" drops every filter but keeps the sort, which is a
+        # display preference rather than one of them.
+        'clear_query': drop_params(
+            request, 'q', 'category', 'size', 'colour', 'min_price', 'max_price'
+        ),
     })
 
 

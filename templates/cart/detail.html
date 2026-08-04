@@ -66,16 +66,22 @@
                         </table>
                     </div>
 
+                    {# "Empty cart" is the destructive one of the pair, so it #}
+                    {# takes the quiet variant rather than matching weight    #}
+                    {# with "Continue shopping".                              #}
                     <div class="shopping__cart__btns">
                         <a href="{% url 'shop:product_list' %}" class="primary-btn cart-btn">Continue shopping</a>
                         <form action="{% url 'cart:clear' %}" method="post" class="d-inline">
                             {% csrf_token %}
-                            <button type="submit" class="primary-btn cart-btn cart-btn-right">Empty cart</button>
+                            <button type="submit" class="primary-btn btn--ghost cart-btn cart-btn-right">Empty cart</button>
                         </form>
                     </div>
                 </div>
 
                 <div class="col-lg-4">
+                    {# Sticky on desktop so the total and the checkout button #}
+                    {# stay beside a long list of lines.                       #}
+                    <div class="cart__total-wrap">
                     {# Coupons are validated at checkout, so applying one here #}
                     {# takes you straight there.                                #}
                     <div class="cart__discount">
@@ -89,6 +95,7 @@
                     </div>
                     <div data-cart-summary>
                         {% include 'cart/_summary.html' %}
+                    </div>
                     </div>
                 </div>
             </div>

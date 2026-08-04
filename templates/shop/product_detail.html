@@ -6,38 +6,35 @@
 
 {% block content %}
 <!-- Shop Details Section Begin -->
-<section class="shop-details">
-    <div class="product__details__pic">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="product__details__breadcrumb">
-                        <a href="{% url 'core:home' %}">Home</a>
-                        <a href="{% url 'shop:product_list' %}">Shop</a>
-                        <span>{{ product.name }}</span>
-                    </div>
+{% comment %}
+The theme stacks this page: a full-bleed gallery band first, then the name,
+price and Add to cart centred underneath it. With real photography that pushes
+the buy box a whole screen below the fold — you scroll past the picture to find
+out what the thing costs.
+
+Laid out side by side instead, which is what a shopper expects and what the
+theme's own classes will carry once the two rows are merged into one. The
+stacked order returns below 992px, where a column each is too narrow.
+{% endcomment %}
+<section class="shop-details product-detail">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="product__details__breadcrumb">
+                    <a href="{% url 'core:home' %}">Home</a>
+                    <a href="{% url 'shop:product_list' %}">Shop</a>
+                    <span>{{ product.name }}</span>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-lg-3 col-md-3">
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link active" data-toggle="tab" href="#tabs-1" role="tab">
-                                <div class="product__thumb__pic set-bg"
-                                     data-setbg="{% if product.image %}{{ product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}">
-                                </div>
-                            </a>
-                        </li>
-                        {% for extra in product.images.all %}
-                            <li class="nav-item">
-                                <a class="nav-link" data-toggle="tab" href="#tabs-{{ forloop.counter|add:1 }}" role="tab">
-                                    <div class="product__thumb__pic set-bg" data-setbg="{{ extra.image.url }}"></div>
-                                </a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div class="col-lg-6 col-md-9">
+        </div>
+        <div class="row">
+            <div class="col-lg-6">
+                {% comment %}The theme runs the thumbnails down a rail beside the
+                main image. A product with five photos makes that rail taller
+                than the image it belongs to, and the gallery stops looking like
+                one object. A strip underneath stays the same height whether
+                there are two photos or ten.{% endcomment %}
+                <div class="product__details__pic">
                     <div class="tab-content">
                         <div class="tab-pane active" id="tabs-1" role="tabpanel">
                             <div class="product__details__pic__item">
@@ -53,14 +50,29 @@
                             </div>
                         {% endfor %}
                     </div>
+                    {% if product.images.all %}
+                        <ul class="nav nav-tabs product__thumbs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-toggle="tab" href="#tabs-1" role="tab"
+                                   aria-label="{{ product.name }}, photo 1">
+                                    <div class="product__thumb__pic set-bg"
+                                         data-setbg="{% if product.image %}{{ product.image.url }}{% else %}{% static 'img/product/product-1.jpg' %}{% endif %}">
+                                    </div>
+                                </a>
+                            </li>
+                            {% for extra in product.images.all %}
+                                <li class="nav-item">
+                                    <a class="nav-link" data-toggle="tab" href="#tabs-{{ forloop.counter|add:1 }}"
+                                       role="tab" aria-label="{{ product.name }}, photo {{ forloop.counter|add:1 }}">
+                                        <div class="product__thumb__pic set-bg" data-setbg="{{ extra.image.url }}"></div>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="product__details__content">
-        <div class="container">
-            <div class="row d-flex justify-content-center">
-                <div class="col-lg-8">
+            <div class="col-lg-6">
                     <div class="product__details__text">
                         <h4>{{ product.name }}</h4>
                         <h3>KES {{ product.price|floatformat:2 }}</h3>
@@ -71,7 +83,16 @@
                             <p class="stock-note stock-note--out">Out of stock</p>
                         {% endif %}
 
-                        <div class="product__details__desc">{{ product.description|safe }}</div>
+                        {% comment %}The full description is the Description tab
+                        further down the page, so this is a short lead-in rather
+                        than the same paragraphs printed twice. Products seeded
+                        without one skip the block entirely instead of leaving an
+                        empty gap above the size chips.{% endcomment %}
+                        {% if product.description %}
+                            <div class="product__details__desc">
+                                {{ product.description|striptags|truncatewords:28 }}
+                            </div>
+                        {% endif %}
 
                         {% comment %}Stock is held on the product rather than per
                         size/colour, so these state what the piece comes in and
@@ -116,9 +137,20 @@
                             </form>
                         {% endif %}
 
+                        {% comment %}The theme's "Guaranteed Safe Checkout"
+                        strip is a bitmap of Stripe, PayPal, Visa, Mastercard,
+                        Amex, Discover and Shopify logos. This shop settles over
+                        M-Pesa and nothing else, so that image was advertising
+                        seven payment methods that all fail at checkout. Say
+                        what actually happens instead.{% endcomment %}
+                        <div class="pay-note">
+                            <span class="pay-note__mark">M-PESA</span>
+                            <p>Pay with <strong>M-Pesa</strong>. Enter your phone number at
+                                checkout and approve the STK prompt on your handset — no
+                                card details, no paybill number to copy.</p>
+                        </div>
+
                         <div class="product__details__last__option">
-                            <h5><span>Guaranteed Safe Checkout</span></h5>
-                            <img src="{% static 'img/shop-details/details-payment.png' %}" alt="Accepted payment methods">
                             <ul>
                                 <li><span>SKU:</span> {{ product.pk }}</li>
                                 <li><span>Categories:</span>
@@ -145,7 +177,14 @@
                                 <div class="product__details__tab__content">
                                     <div class="product__details__tab__content__item">
                                         <h5>Product information</h5>
-                                        {{ product.description|safe }}
+                                        {% if product.description %}
+                                            {{ product.description|safe }}
+                                        {% else %}
+                                            {# Rather than an empty panel under a heading. #}
+                                            <p>We are still writing this one up. Ask us anything on the
+                                                <a href="{% url 'core:contact' %}">contact page</a> and we will
+                                                get you the details.</p>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -170,7 +209,6 @@
                 </div>
             </div>
         </div>
-    </div>
 </section>
 <!-- Shop Details Section End -->
 

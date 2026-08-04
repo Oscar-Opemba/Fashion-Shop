@@ -22,7 +22,11 @@
     <link rel="stylesheet" href="{% static 'css/slicknav.min.css' %}" type="text/css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}" type="text/css">
 
-    {# Loaded last so it wins over the theme without editing the theme's files. #}
+    {# Both of ours load after the theme, so they win without editing it.      #}
+    {# refresh.css restyles the theme and defines the palette tokens;          #}
+    {# storefront.css bridges the markup gaps and consumes those tokens, so it #}
+    {# comes last and keeps the final word.                                    #}
+    <link rel="stylesheet" href="{% static 'css/refresh.css' %}" type="text/css">
     <link rel="stylesheet" href="{% static 'css/storefront.css' %}" type="text/css">
 
     {% block extra_css %}{% endblock %}

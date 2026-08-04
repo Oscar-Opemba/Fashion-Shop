@@ -45,7 +45,7 @@ Fashion-Shop/
 ├── shop/                                   ── PRODUCTS — the domain center ──
 │   ├── models.py                     118   Category, Product, ProductImage,
 │   │                                       Size, Colour
-│   ├── views.py                      298   product_list, product_detail,
+│   ├── views.py                      401   product_list, product_detail,
 │   │                                       facet_links, price_band_links,
 │   │                                       + 6 staff CRUD class-based views
 │   ├── forms.py                       83   ProductForm, CategoryForm
@@ -97,8 +97,8 @@ Fashion-Shop/
 │   ├── tests.py                      260
 │   └── migrations/0001_initial.py
 │
-├── templates/                              ── 45 FILES, 2,602 LINES ──
-│   ├── base.html                      59   the skeleton every page extends
+├── templates/                              ── 45 FILES, 2,706 LINES ──
+│   ├── base.html                      63   the skeleton every page extends
 │   │
 │   │                                       error pages — found by NAME, no url
 │   ├── 404.html                       57   search box + way back into the shop
@@ -108,11 +108,11 @@ Fashion-Shop/
 │   ├── 400.html                       37
 │   │
 │   ├── includes/                           8 reusable partials
-│   │   ├── header.html                79   nav, cart badge, account menu
+│   │   ├── header.html                86   nav, cart badge, account menu
 │   │   ├── footer.html                60
 │   │   ├── social_login.html          33   Google/Facebook buttons
 │   │   ├── offcanvas.html             29   mobile slide-out menu
-│   │   ├── product_card.html          24   one card, used everywhere
+│   │   ├── product_card.html          38   one card, used everywhere
 │   │   ├── breadcrumb.html            16
 │   │   ├── messages.html              12   renders alert-{{ message.tags }}
 │   │   └── search_modal.html           9
@@ -123,15 +123,16 @@ Fashion-Shop/
 │   │   └── contact.html               78
 │   │
 │   ├── shop/
-│   │   ├── product_detail.html       197   gallery, sizes/colours, add to cart
-│   │   ├── product_list.html         194   search, category, price, size, colour
+│   │   ├── product_detail.html       235   gallery, sizes/colours, add to cart
+│   │   ├── product_list.html         231   search, category, price, size, colour,
+│   │                                       active-filter chips
 │   │   ├── manage_list.html          102   staff catalogue table
 │   │   ├── product_form.html          53   create + edit, both models
 │   │   ├── product_confirm_delete.html 27
 │   │   └── category_confirm_delete.html 25
 │   │
 │   ├── cart/
-│   │   ├── detail.html               107
+│   │   ├── detail.html               114
 │   │   └── _summary.html               9   fragment — underscore = not a page
 │   │
 │   ├── orders/
@@ -164,11 +165,13 @@ Fashion-Shop/
 │       ├── authentication_error.html  13
 │       └── login_cancelled.html       10
 │
-├── static/                                 ── 111 FILES — theme + ours ──
-│   ├── css/                           10   bootstrap.min, style, owl.carousel,
+├── static/                                 ── 112 FILES — theme + ours ──
+│   ├── css/                           11   bootstrap.min, style, owl.carousel,
 │   │                                       magnific-popup, nice-select, slicknav,
 │   │                                       font-awesome, elegant-icons,
-│   │                                       style.css.map, storefront.css (ours)
+│   │                                       style.css.map, plus ours:
+│   │                                       refresh.css (palette + restyle) and
+│   │                                       storefront.css (bridges + new pages)
 │   ├── js/                            11   jquery-3.3.1, bootstrap, owl.carousel,
 │   │                                       mixitup, magnific-popup, nicescroll,
 │   │                                       countdown, slicknav, nice-select,

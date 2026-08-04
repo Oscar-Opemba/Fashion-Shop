@@ -98,12 +98,16 @@ in seconds.
 ## The front end
 
 `static/css/style.css` and the rest of `static/` are the template's own files
-and are never edited. Everything the storefront adds on top lives in
-`static/css/storefront.css`, loaded last — mostly places where the template
-uses a link but a real shop needs a form POST (add to cart, wishlist, sign
-out), plus the pages the template never shipped (orders, sign-in, addresses).
-Its colours and metrics are the template's, so the site still looks like the
-template.
+and are never edited. Two sheets of ours load after it and win:
+
+- `static/css/refresh.css` — the palette (as `:root` custom properties), the
+  type scale and the button, card and form treatment. This is where the shop
+  stops looking like the stock template.
+- `static/css/storefront.css` — markup the template never had: places where it
+  uses a link but a real shop needs a form POST (add to cart, sign out), plus
+  the pages it never shipped (orders, sign-in, addresses, the M-Pesa results).
+  It writes its colours as `var(--ink)`, `var(--accent)` and so on, so both
+  sheets stay in step.
 
 `static/js/shop.js` layers add-to-cart-without-a-reload on top of the theme's
 `main.js`. Every form still works with JavaScript off.
